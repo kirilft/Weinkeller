@@ -24,9 +24,9 @@ class FrostedBox extends StatelessWidget {
           child: Container(
             alignment: Alignment.center,
             height: 100.0,
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
+              children: [
                 Padding(
                   padding: EdgeInsets.all(8.0),
                   child: Icon(Icons.menu, color: Color(0xFF07070F), size: 30.0),
