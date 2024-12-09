@@ -10,7 +10,7 @@ class MyHomePage extends StatelessWidget {
       body: Stack(
         children: [
           Container(
-            color: const Color(0xFF2977FF), // Blue background
+            color: const Color(0xFFFF0000), // Blue background
           ),
           const Align(
             alignment: Alignment.bottomCenter,

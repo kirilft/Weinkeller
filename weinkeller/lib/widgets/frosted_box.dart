@@ -24,20 +24,33 @@ class FrostedBox extends StatelessWidget {
           child: Container(
             alignment: Alignment.center,
             height: 100.0,
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Icon(Icons.menu, color: Color(0xFF07070F), size: 30.0),
+                // Menu Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/menu'); // Route to Menu Page
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(Icons.menu, color: Color(0xFF07070F), size: 52.0),
+                  ),
                 ),
-                Padding(
+                // Camera Icon (placeholder or inactive)
+                const Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: Icon(Icons.camera_alt, color: Color(0xFF07070F), size: 30.0),
+                  child: Icon(Icons.camera_alt, color: Color(0xFF07070F), size: 52.0),
                 ),
-                Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Icon(Icons.person, color: Color(0xFF07070F), size: 30.0),
+                // Account Icon
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/account'); // Route to Account Page
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(Icons.person, color: Color(0xFF07070F), size: 52.0),
+                  ),
                 ),
               ],
             ),

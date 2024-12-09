@@ -1,4 +1,5 @@
 {
     "java.configuration.updateBuildConfiguration": "automatic",
-    "cmake.sourceDirectory": "C:/Github/Weinkeller/weinkeller/windows/flutter"
+    "cmake.sourceDirectory": "C:/Github/Weinkeller/weinkeller/windows/flutter",
+    "cmake.ignoreCMakeListsMissing": true
 }

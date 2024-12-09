@@ -14,4 +14,4 @@ class MenuPage extends StatelessWidget {
       ),
     );
   }
-}flutter
+}
