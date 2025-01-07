@@ -15,10 +15,10 @@ class HistoryPage extends StatelessWidget {
           },
         ),
       ),
-      body: Center(
+      body: const Center(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: const Text(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
             'History is currently unavailable, it will be added in a future version.',
             textAlign: TextAlign.center,
             style: TextStyle(

@@ -35,7 +35,7 @@ class _ChangelogPageState extends State<ChangelogPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Changelog'),
-        actions: [],
+        actions: const [],
       ),
       body: const Center(
         child: Text('Redirecting to the changelog...'),
