@@ -18,7 +18,7 @@ import 'package:weinkeller/pages/settings.dart';
 import 'package:weinkeller/pages/qr_code_result_page.dart';
 
 void main() {
-  final apiService = ApiService(baseUrl: 'http://10.20.30.19:8080');
+  final apiService = ApiService(baseUrl: 'http://10.20.30.19:5432');
 
   runApp(
     MultiProvider(

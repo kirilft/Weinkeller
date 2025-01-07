@@ -26,7 +26,7 @@ class ApiService {
 
   /// By default, connects to localhost:8080
   /// For Android emulator, you might need 'http://10.0.2.2:8080' instead.
-  ApiService({this.baseUrl = 'http://10.20.30.19:8080'});
+  ApiService({this.baseUrl = 'http://10.20.30.19:5432'});
 
   /// Example: Perform a login request and return a token if successful
   /// Throws:
