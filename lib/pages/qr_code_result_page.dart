@@ -8,7 +8,7 @@ import 'package:weinkeller/services/auth_service.dart';
 class QrCodeResultPage extends StatelessWidget {
   final String qrData;
 
-  const QrCodeResultPage({Key? key, required this.qrData}) : super(key: key);
+  const QrCodeResultPage({super.key, required this.qrData});
 
   @override
   Widget build(BuildContext context) {

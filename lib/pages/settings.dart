@@ -15,10 +15,10 @@ class SettingsPage extends StatelessWidget {
           },
         ),
       ),
-      body: Center(
+      body: const Center(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: const Text(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
             'Settings are coming soon! Stay tuned for future updates.',
             textAlign: TextAlign.center,
             style: TextStyle(
