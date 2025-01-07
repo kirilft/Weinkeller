@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:weinkeller/pages/account.dart';
+import 'package:weinkeller/pages/changelog.dart';
+import 'package:weinkeller/pages/history.dart';
+import 'package:weinkeller/pages/homescreen.dart';
+import 'package:weinkeller/pages/login.dart';
 import 'package:weinkeller/pages/menu.dart';
-import 'home.dart';
+import 'package:weinkeller/pages/password_reset.dart';
+import 'package:weinkeller/pages/settings.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,16 +18,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "Weinkeller",
+      title: 'Weinkeller',
       initialRoute: '/',
       routes: {
-        '/menu': (context) => const MenuPage(),
+        '/': (context) => const HomeScreen(),
+        '/login': (context) => const LoginPage(),
+        '/password_reset': (context) => const PasswordResetPage(),
         '/account': (context) => const AccountPage(),
+        '/settings': (context) => const SettingsPage(),
+        '/menu': (context) => const MenuPage(),
+        '/history': (context) => const HistoryPage(),
+        '/changelog': (context) => const ChangelogPage(),
       },
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(),
     );
   }
 }

@@ -10,7 +10,7 @@ class MenuPage extends StatelessWidget {
         title: const Text('Menu'),
       ),
       body: const Center(
-        child: Text('Menu Page'),
+        child: Text('Menu Page Content Here'),
       ),
     );
   }

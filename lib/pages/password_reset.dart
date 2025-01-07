@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-class LoginPage extends StatelessWidget {
-  const LoginPage({super.key});
+class PasswordResetPage extends StatelessWidget {
+  const PasswordResetPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: const Text('Forgot Password'), // Set the title of the page
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -29,24 +29,6 @@ class LoginPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20), // Add spacing between inputs
-            const TextField(
-              decoration: InputDecoration(
-                labelText: 'Password',
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 10), // Add small spacing for the link
-            Align(
-              alignment: Alignment
-                  .centerLeft, // Align the "Forgot Password" link to the right
-              child: TextButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/password_reset');
-                },
-                icon: const Icon(Icons.link, size: 16),
-                label: const Text('Forgot Password'),
-              ),
-            ),
             Align(
               alignment: Alignment
                   .centerRight, // Align the login button to the bottom-left
@@ -60,7 +42,7 @@ class LoginPage extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                 ),
-                child: const Text('Login'),
+                child: const Text('Reset Password'),
               ),
             ),
           ],
