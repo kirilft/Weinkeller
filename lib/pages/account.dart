@@ -1,66 +1,41 @@
+// lib/pages/account.dart
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import 'package:weinkeller/services/auth_service.dart';
 
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
 
-  // Method to open the account management website
-  Future<void> _launchAccountWebsite(BuildContext context) async {
-    const url =
-        'https://kasai.tech/account'; // Replace with the actual URL for account management
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode
-            .externalApplication, // Opens in the user's default browser
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Could not open the account management website')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Account'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context); // Go back to the previous screen
-          },
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0), // Add padding to the content
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Manage your account details.',
-              style: TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.w600,
+      appBar: AppBar(title: const Text('Account')),
+      body: authService.isLoggedIn
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('You are logged in!'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await authService.logout();
+                      // After logging out, go back to Home
+                      Navigator.pushReplacementNamed(context, '/');
+                    },
+                    child: const Text('Log Out'),
+                  ),
+                ],
+              ),
+            )
+          : Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/login'),
+                child: const Text('Log In'),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () => _launchAccountWebsite(context),
-              icon: const Icon(Icons.open_in_browser),
-              label: const Text('Visit Account Management'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue, // Blue button
-                foregroundColor: Colors.white, // White text
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
