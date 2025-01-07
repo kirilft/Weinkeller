@@ -25,12 +25,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
-  image_path_ios: "assets/icon.png"
-  image_path_ios_dark_transparent: "assets/icon.png"
-  image_path_android: "assets/icon.png"
-  adaptive_icon_background: "assets/icon.png"
-  adaptive_icon_foreground: "assets/icon.png"
+  image_path_ios: "assets/Weinkeller_white.png"
+  image_path_ios_dark_transparent: "assets/Weinkeller_transparent.png"
+  image_path_android: "assets/Weinkeller_white.png"
+  adaptive_icon_background: "assets/Weinkeller_white.png"
+  adaptive_icon_foreground: "assets/Weinkeller_transparent.png"
   remove_alpha_ios: true
