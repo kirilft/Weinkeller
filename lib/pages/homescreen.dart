@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -122,11 +123,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      // AppBar without a menu icon
+
+      // Makes the body appear *behind* the AppBar
+      extendBodyBehindAppBar: true,
+
       appBar: AppBar(
+        // Make AppBar transparent
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text('Home Screen'),
         automaticallyImplyLeading: false, // Removes the default drawer icon
       ),
+
       drawer: Drawer(
         child: ListView(
           children: [
@@ -175,13 +183,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
       body: Stack(
         children: [
+          // Always show a blue-green background
+          Container(
+            color: const Color(0xFF00BFA5),
+          ),
+
           // Camera preview as the background if initialized
           if (_isCameraInitialized)
             CameraPreview(_cameraController)
 
-          // If there's an error (e.g. no camera), show a message and a "Manual Entry" button
+          // If there's an error (e.g., no camera), show a message and a "Manual Entry" button
           else if (_cameraErrorMessage != null)
             Center(
               child: Padding(
@@ -223,32 +237,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                   child: Container(
-                    color: Colors.white.withOpacity(0.2),
+                    color: const Color(0x33FFFFFF),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         // Menu button (opens the drawer)
                         IconButton(
-                          icon: const Icon(Icons.menu),
+                          icon: const Icon(
+                            Icons.menu,
+                            size: 30,
+                          ),
                           onPressed: () {
                             _scaffoldKey.currentState?.openDrawer();
                           },
                           tooltip: 'Open Menu',
                         ),
 
-                        // Take a picture button
+                        // Take a picture button (in this case, opens the manual code dialog)
                         ElevatedButton(
                           onPressed: _showManualCodeDialog,
                           style: ElevatedButton.styleFrom(
                             shape: const CircleBorder(),
-                            padding: const EdgeInsets.all(24),
+                            padding: const EdgeInsets.all(18),
                           ),
-                          child: const Icon(Icons.camera_alt),
+                          child: const Icon(
+                            FontAwesomeIcons.qrcode,
+                            size: 40,
+                            color: Colors.blue,
+                          ),
                         ),
 
                         // Account button
                         IconButton(
-                          icon: const Icon(Icons.person),
+                          icon: const Icon(
+                            Icons.person,
+                            size: 30,
+                          ),
                           onPressed: () {
                             Navigator.pushNamed(context, '/account');
                           },
