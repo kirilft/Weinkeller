@@ -42,7 +42,7 @@ class PasswordResetPage extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                 ),
-                child: const Text('Reset Password'),
+                child: const Text('Send Reset Link'), // Button text
               ),
             ),
           ],
