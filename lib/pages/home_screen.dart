@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
+import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:weinkeller/services/database_service.dart';
 
-// ...existing code...
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -14,10 +14,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey _qrKey = GlobalKey(debugLabel: 'QR');
 
-  late CameraController _cameraController;
-  bool _cameraInitialized = false;
+  QRViewController? _qrController;
+  String? _scannedCode;
   String? _errorMessage;
+  int _pendingChangesCount = 0;
 
   final List<String> _greetings = [
     'Hello',
@@ -32,8 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
     _pickRandomGreeting();
+    _loadPendingChangesCount();
   }
 
   void _pickRandomGreeting() {
@@ -41,37 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _randomGreeting = _greetings[randomIndex];
   }
 
-  Future<void> _initializeCamera() async {
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        throw Exception('No cameras found.');
-      }
-      final camera = cameras.first;
-      _cameraController = CameraController(
-        camera,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-      await _cameraController.initialize();
-      setState(() {
-        _cameraInitialized = true;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage =
-            'Unable to access the camera. Check permissions and retry.';
-      });
-      debugPrint('Error initializing camera: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_cameraInitialized) {
-      _cameraController.dispose();
-    }
-    super.dispose();
+  Future<void> _loadPendingChangesCount() async {
+    final entries = await DatabaseService().getPendingEntries();
+    setState(() {
+      _pendingChangesCount = entries.length;
+    });
   }
 
   void _showManualCodeDialog() {
@@ -83,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
           title: const Text('Manual Entry'),
           content: TextField(
             onChanged: (value) => enteredCode = value,
-            decoration: const InputDecoration(labelText: 'Enter Code'),
+            decoration: const InputDecoration(labelText: 'Enter WineID'),
           ),
           actions: [
             TextButton(
@@ -108,19 +84,60 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void dispose() {
+    _qrController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'Home Screen',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Spacer to balance the right-side icon
+            const SizedBox(width: 24), // Adjust width to match the icon size
+
+            // Centered title
+            Text(
+              'Home Screen',
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+            ),
+
+            // Right-side pending changes icon (if needed)
+            if (_pendingChangesCount > 0)
+              Stack(
+                children: [
+                  const Icon(
+                    Icons.sync_problem,
+                    color: Colors.red,
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: CircleAvatar(
+                      radius: 8,
+                      backgroundColor: Colors.white,
+                      child: Text(
+                        '$_pendingChangesCount',
+                        style: const TextStyle(fontSize: 10, color: Colors.red),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              // Placeholder to keep the title centered when no icon is shown
+              const SizedBox(width: 24),
+          ],
         ),
         automaticallyImplyLeading: false,
       ),
@@ -178,10 +195,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           Container(
-              color: isDarkMode ? Colors.grey[900] : const Color(0xFF00BFA5)),
-          if (_cameraInitialized)
-            CameraPreview(_cameraController)
-          else if (_errorMessage != null)
+            color: isDarkMode ? Colors.grey[900] : const Color(0xFF00BFA5),
+          ),
+          if (_errorMessage != null)
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -209,10 +225,30 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            Center(
-              child: CircularProgressIndicator(
-                color: isDarkMode ? Colors.white : Colors.blue,
-              ),
+            QRView(
+              key: _qrKey,
+              onQRViewCreated: (QRViewController controller) {
+                _qrController = controller;
+                controller.scannedDataStream.listen((scanData) {
+                  if (scanData.code != null && _scannedCode != scanData.code) {
+                    setState(() {
+                      _scannedCode = scanData.code;
+                    });
+                    Navigator.pushNamed(
+                      context,
+                      '/qrResult',
+                      arguments: scanData.code,
+                    );
+                  }
+                });
+              },
+              onPermissionSet: (ctrl, isGranted) {
+                if (!isGranted) {
+                  setState(() {
+                    _errorMessage = 'Camera permission denied.';
+                  });
+                }
+              },
             ),
           Positioned(
             bottom: 0,
@@ -227,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.menu,
                           size: 30,
                           color: Colors.white,
@@ -267,69 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ...existing code...
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: const Center(child: Text('Settings Screen')),
-    );
-  }
-}
-
-class HistoryScreen extends StatelessWidget {
-  const HistoryScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('History')),
-      body: const Center(child: Text('History Screen')),
-    );
-  }
-}
-
-class ChangelogScreen extends StatelessWidget {
-  const ChangelogScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Changelog')),
-      body: const Center(child: Text('Changelog Screen')),
-    );
-  }
-}
-
-class QRResultScreen extends StatelessWidget {
-  const QRResultScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final String enteredCode =
-        ModalRoute.of(context)?.settings.arguments as String? ?? 'No Code';
-    return Scaffold(
-      appBar: AppBar(title: const Text('QR Result')),
-      body: Center(child: Text('Entered Code: $enteredCode')),
-    );
-  }
-}
-
-class AccountScreen extends StatelessWidget {
-  const AccountScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
-      body: const Center(child: Text('Account Screen')),
     );
   }
 }

@@ -1,9 +1,9 @@
-// lib/services/api_service.dart
-
 import 'dart:convert';
+import 'dart:io'; // For file I/O
+import 'package:path_provider/path_provider.dart'; // For accessing local file paths
 import 'package:http/http.dart' as http;
 
-/// Custom exceptions defined directly in this file
+/// Custom exceptions in case the server responds with specific errors.
 class WrongPasswordException implements Exception {
   final String message;
   WrongPasswordException(this.message);
@@ -20,69 +20,105 @@ class NoResponseException implements Exception {
   String toString() => 'NoResponseException: $message';
 }
 
-/// The main API service class
+/// The main API service class.
+///
+/// Handles user authentication, fermentation entries, QR data, and local history.
 class ApiService {
   final String baseUrl;
 
-  /// By default, connects to localhost:8080
-  /// For Android emulator, you might need 'http://10.0.2.2:8080' instead.
-  ApiService({this.baseUrl = 'http://10.20.30.19:5432'});
+  /// Constructor to initialize the base URL.
+  ApiService({required this.baseUrl});
 
-  /// Example: Perform a login request and return a token if successful
+  /// Logs in a user and returns a token if successful.
+  ///
+  /// Server endpoint is [POST] `$baseUrl/Users/Login`
+  ///
   /// Throws:
-  /// - [WrongPasswordException] if server returns 401
-  /// - [NoResponseException] if there's a network/socket issue
-  /// - [Exception] for other error statuses
+  /// - [WrongPasswordException] if status 401
+  /// - [NoResponseException] on network/socket issues
+  /// - [Exception] for other server errors
   Future<String> loginUser(String email, String password) async {
-    final url = Uri.parse('$baseUrl/api/login');
+    final url = Uri.parse('$baseUrl/Users/Login');
+    print('\n[ApiService] loginUser() - Starting request');
+    print('[ApiService]  -> URL: $url');
+    print(
+        '[ApiService]  -> Sending JSON: {"email": "$email", "password": "******"}');
+
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
           'password': password,
         }),
       );
 
-      // Distinguish by status code
+      print('[ApiService]  <- Response code: ${response.statusCode}');
+      print('[ApiService]  <- Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        // Parse the token from response
         final data = jsonDecode(response.body);
         final token = data['token'];
         if (token == null || token.isEmpty) {
-          throw Exception('Login failed: No token returned.');
+          print('[ApiService]  !! No token in response!');
+          throw Exception('Login failed: No token returned by the server.');
         }
+        print('[ApiService] loginUser() - Success, got token');
         return token;
       } else if (response.statusCode == 401) {
-        // Typically 401 indicates invalid credentials
+        print('[ApiService] loginUser() - WrongPasswordException thrown');
         throw WrongPasswordException('Incorrect email or password.');
       } else {
-        // Any other non-200 status code
+        print(
+            '[ApiService] loginUser() - Unexpected status: ${response.statusCode}');
         throw Exception(
-          'Login failed with status code ${response.statusCode}\n'
-          'Response body: ${response.body}',
+          'Login failed (status ${response.statusCode}):\n${response.body}',
         );
       }
     } catch (e) {
-      // If we detect a socket/network issue, rethrow as NoResponseException
       if (e.toString().contains('SocketException')) {
+        print(
+            '[ApiService] loginUser() - SocketException / NoResponseException: $e');
         throw NoResponseException(
-            'Unable to contact the server. Check your network.');
+          'Unable to connect to $url. Check your network.',
+        );
       }
-      rethrow; // Otherwise rethrow any other exceptions
+      print('[ApiService] loginUser() - Exception: $e');
+      rethrow;
     }
   }
 
-  /// Example function to save QR data to the server
-  Future<void> saveQrData({
+  /// Adds a new fermentation entry to the server and saves it locally.
+  ///
+  /// Server endpoint is [POST] `$baseUrl/FermentationEntries`
+  ///
+  /// Requires:
+  /// - [token]: The Bearer token for authentication.
+  /// - [date]: The date of the fermentation entry.
+  /// - [density]: The density value.
+  /// - [wineId]: The ID of the wine.
+  ///
+  /// Throws:
+  /// - [NoResponseException] on network/socket issues
+  /// - [Exception] for other server errors
+  Future<void> addFermentationEntry({
     required String token,
-    required String qrData,
-    required String userInput,
+    required DateTime date,
+    required double density,
+    required int wineId,
   }) async {
-    final url = Uri.parse('$baseUrl/api/qr/save');
+    final url = Uri.parse('$baseUrl/FermentationEntries');
+    final body = {
+      'date': date.toIso8601String(),
+      'density': density,
+      'wineId': wineId,
+    };
+
+    print('\n[ApiService] addFermentationEntry() - Starting request');
+    print('[ApiService]  -> URL: $url');
+    print('[ApiService]  -> Request body: $body');
+    print('Token used for authentication: $token');
 
     try {
       final response = await http.post(
@@ -91,27 +127,56 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'qrData': qrData,
-          'userInput': userInput,
-        }),
+        body: jsonEncode(body),
       );
 
-      if (response.statusCode == 200) {
-        // Successfully saved
-        return;
+      print('[ApiService]  <- Response code: ${response.statusCode}');
+      print('[ApiService]  <- Response body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        print('[ApiService] addFermentationEntry() - Success');
       } else {
-        throw Exception(
-          'Failed to save QR data. '
-          'Status code: ${response.statusCode}, Body: ${response.body}',
-        );
+        print('[ApiService] Server error, saving locally');
       }
     } catch (e) {
-      // If there's a socket/network error, optionally convert it similarly:
-      if (e.toString().contains('SocketException')) {
-        throw NoResponseException('Unable to reach the server.');
-      }
-      rethrow;
+      print('[ApiService] Error connecting to server, saving locally');
     }
+
+    // Save the entry locally to both database and file
+    await _saveToLocalHistory(body);
+  }
+
+  /// Saves a fermentation entry to a local file for history tracking.
+  Future<void> _saveToLocalHistory(Map<String, dynamic> entry) async {
+    final file = await _getLocalFile();
+    List<Map<String, dynamic>> entries = await loadLocalHistory();
+
+    // Add the new entry to the existing list
+    entries.add(entry);
+
+    // Write the updated list back to the file
+    await file.writeAsString(jsonEncode(entries));
+    print('[ApiService] _saveToLocalHistory() - Entry saved locally');
+  }
+
+  /// Loads all fermentation entries from the local file for the history page.
+  Future<List<Map<String, dynamic>>> loadLocalHistory() async {
+    try {
+      final file = await _getLocalFile();
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        return List<Map<String, dynamic>>.from(jsonDecode(content));
+      }
+      return [];
+    } catch (e) {
+      print('[ApiService] loadLocalHistory() - Error: $e');
+      return [];
+    }
+  }
+
+  /// Gets the local file for saving fermentation entries.
+  Future<File> _getLocalFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return File('${directory.path}/fermentation_history.json');
   }
 }

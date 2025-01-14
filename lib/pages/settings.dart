@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:weinkeller/services/theme_provider.dart'; // Corrected import path
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();

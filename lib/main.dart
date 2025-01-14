@@ -1,5 +1,6 @@
 // lib/main.dart
 
+import 'dart:async'; // For runZonedGuarded
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -16,40 +17,52 @@ import 'package:weinkeller/pages/home_screen.dart';
 import 'package:weinkeller/pages/login.dart';
 import 'package:weinkeller/pages/password_reset.dart';
 import 'package:weinkeller/pages/settings.dart';
-import 'package:weinkeller/pages/qr_code_result_page.dart';
+import 'package:weinkeller/pages/qr_result.dart';
 
 // Providers
-import 'package:weinkeller/services/theme_provider.dart'; // Import ThemeProvider
+import 'package:weinkeller/services/theme_provider.dart';
 
 Future<void> main() async {
+  // Make sure widgets are bound before using shared prefs or such.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load the saved baseUrl (if any) from SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
-  final savedBaseUrl = prefs.getString('baseUrl') ?? '';
+  // Use runZonedGuarded to catch all unhandled errors for troubleshooting/logging
+  runZonedGuarded(() async {
+    // Load the saved baseUrl (if any) from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final savedBaseUrl = prefs.getString('baseUrl') ?? '';
 
-  // Create the ApiService with the saved baseUrl
-  final apiService = ApiService(baseUrl: savedBaseUrl);
+    // Create the ApiService with the saved baseUrl
+    final apiService = ApiService(baseUrl: savedBaseUrl);
 
-  runApp(
-    MultiProvider(
-      providers: [
-        // Provide the ApiService to the whole app
-        Provider<ApiService>(
-          create: (_) => apiService,
-        ),
-        // Provide AuthService that consumes ApiService
-        ChangeNotifierProvider<AuthService>(
-          create: (_) => AuthService(apiService: apiService),
-        ),
-        // Provide ThemeProvider
-        ChangeNotifierProvider<ThemeProvider>(
-          create: (_) => ThemeProvider(),
-        ),
-      ],
-      child: const MyWeinkellerApp(),
-    ),
-  );
+    runApp(
+      MultiProvider(
+        providers: [
+          // Provide the ApiService
+          Provider<ApiService>(
+            create: (_) => apiService,
+          ),
+          // Provide AuthService
+          ChangeNotifierProvider<AuthService>(
+            create: (_) => AuthService(apiService: apiService),
+          ),
+          // Provide ThemeProvider
+          ChangeNotifierProvider<ThemeProvider>(
+            create: (_) => ThemeProvider(),
+          ),
+        ],
+        child: const MyWeinkellerApp(),
+      ),
+    );
+  }, (error, stackTrace) {
+    if (error is WrongPasswordException) {
+      // We can log it or send to analytics
+      debugPrint(
+          'GLOBAL ERROR HANDLER: WrongPasswordException -> ${error.message}');
+    } else {
+      debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
+    }
+  });
 }
 
 class MyWeinkellerApp extends StatelessWidget {
@@ -57,11 +70,11 @@ class MyWeinkellerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to ThemeProvider
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
       title: 'Weinkeller',
+      debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
         '/': (context) => const HomeScreen(),
@@ -71,26 +84,19 @@ class MyWeinkellerApp extends StatelessWidget {
         '/settings': (context) => const SettingsPage(),
         '/history': (context) => const HistoryPage(),
         '/changelog': (context) => const ChangelogPage(),
-        '/qrResult': (context) {
-          // Retrieve arguments passed via Navigator.pushNamed(..., arguments: ...)
-          final args = ModalRoute.of(context)!.settings.arguments as String?;
-          return QrCodeResultPage(
-            qrData: args ?? 'No data',
-          );
-        },
+        '/qrResult': (context) => QRResultPage(
+              qrCode: ModalRoute.of(context)!.settings.arguments as String,
+            ),
       },
       theme: ThemeData(
-        brightness: Brightness.light, // Define light theme
+        brightness: Brightness.light,
         primarySwatch: Colors.blue,
-        // You can customize more properties for the light theme here
       ),
       darkTheme: ThemeData(
-        brightness: Brightness.dark, // Define dark theme
+        brightness: Brightness.dark,
         primarySwatch: Colors.blue,
-        // You can customize more properties for the dark theme here
       ),
-      themeMode:
-          themeProvider.themeMode, // Use the theme mode from ThemeProvider
+      themeMode: themeProvider.themeMode,
     );
   }
 }
