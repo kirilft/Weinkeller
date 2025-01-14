@@ -1,7 +1,70 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- The INTERNET permission is required for development. Specifically,
-         the Flutter tool needs it to communicate with the running application
-         to allow setting breakpoints, to provide hot reload, etc.
-    -->
-    <uses-permission android:name="android.permission.INTERNET"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.weinkeller">
+
+    <!-- Request permissions to match iOS usage descriptions -->
+    <!-- Camera permission to scan and take photos -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Photo/External Storage access for saving and retrieving images -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Local network usage may require ACCESS_NETWORK_STATE or INTERNET permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Bluetooth permissions (different sets for classic and BLE depending on usage).
+         If you only need BLE scanning, you may also need FINE_LOCATION or BLUETOOTH_SCAN
+         permissions on newer Android versions. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <!-- On Android 12+ you might need the BLUETOOTH_CONNECT and BLUETOOTH_SCAN permissions. -->
+    <!-- <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+         <uses-permission android:name="android.permission.BLUETOOTH_SCAN" /> -->
+    <!-- Location permission (if you need background location or precise location) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- On Android 10+ for continuous background location access -->
+    <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> -->
+    <!-- Microphone usage for recording or voice input -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:name="${applicationName}"
+        android:label="weinkeller"
+        android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true">
+        
+        <!-- Main launcher activity -->
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- Flutter NormalTheme -->
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Required by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <!-- Queries for PROCESS_TEXT actions if needed for text sharing/processing -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
 </manifest>

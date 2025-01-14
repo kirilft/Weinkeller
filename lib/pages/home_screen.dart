@@ -1,9 +1,9 @@
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:weinkeller/services/database_service.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,10 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadPendingChangesCount() async {
-    final entries = await DatabaseService().getPendingEntries();
-    setState(() {
-      _pendingChangesCount = entries.length;
-    });
+    try {
+      final entries = await DatabaseService().getPendingEntries();
+      setState(() {
+        _pendingChangesCount = entries.length;
+      });
+    } catch (e) {
+      print('[HomeScreen] Error loading pending changes count: $e');
+    }
   }
 
   void _showManualCodeDialog() {
@@ -60,6 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
           content: TextField(
             onChanged: (value) => enteredCode = value,
             decoration: const InputDecoration(labelText: 'Enter WineID'),
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+            ],
           ),
           actions: [
             TextButton(
@@ -70,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
                 Navigator.pushNamed(
-                  this.context,
+                  context,
                   '/qrResult',
                   arguments: enteredCode,
                 );
@@ -102,18 +110,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Spacer to balance the right-side icon
-            const SizedBox(width: 24), // Adjust width to match the icon size
-
-            // Centered title
+            const SizedBox(width: 24), // Spacer to balance right-side icon
             Text(
               'Home Screen',
               style: TextStyle(
                 color: isDarkMode ? Colors.white : Colors.black,
               ),
             ),
-
-            // Right-side pending changes icon (if needed)
             if (_pendingChangesCount > 0)
               Stack(
                 children: [
@@ -135,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               )
             else
-              // Placeholder to keep the title centered when no icon is shown
               const SizedBox(width: 24),
           ],
         ),
@@ -280,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           backgroundColor: Colors.white,
                         ),
                         child: const Icon(
-                          FontAwesomeIcons.qrcode,
+                          FontAwesomeIcons.qrcode, // Correct QR code icon
                           size: 40,
                           color: Colors.black,
                         ),

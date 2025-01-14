@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io'; // For file I/O
 import 'package:path_provider/path_provider.dart'; // For accessing local file paths
 import 'package:http/http.dart' as http;
+import 'package:weinkeller/services/database_service.dart';
 
 /// Custom exceptions in case the server responds with specific errors.
 class WrongPasswordException implements Exception {
@@ -25,13 +26,12 @@ class NoResponseException implements Exception {
 /// Handles user authentication, fermentation entries, QR data, and local history.
 class ApiService {
   final String baseUrl;
+  final DatabaseService _databaseService = DatabaseService();
 
   /// Constructor to initialize the base URL.
   ApiService({required this.baseUrl});
 
   /// Logs in a user and returns a token if successful.
-  ///
-  /// Server endpoint is [POST] `$baseUrl/Users/Login`
   ///
   /// Throws:
   /// - [WrongPasswordException] if status 401
@@ -39,7 +39,7 @@ class ApiService {
   /// - [Exception] for other server errors
   Future<String> loginUser(String email, String password) async {
     final url = Uri.parse('$baseUrl/Users/Login');
-    print('\n[ApiService] loginUser() - Starting request');
+    print('[ApiService] loginUser() - Starting request');
     print('[ApiService]  -> URL: $url');
     print(
         '[ApiService]  -> Sending JSON: {"email": "$email", "password": "******"}');
@@ -48,10 +48,7 @@ class ApiService {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       print('[ApiService]  <- Response code: ${response.statusCode}');
@@ -61,7 +58,7 @@ class ApiService {
         final data = jsonDecode(response.body);
         final token = data['token'];
         if (token == null || token.isEmpty) {
-          print('[ApiService]  !! No token in response!');
+          print('[ApiService] loginUser() - No token in response!');
           throw Exception('Login failed: No token returned by the server.');
         }
         print('[ApiService] loginUser() - Success, got token');
@@ -78,26 +75,16 @@ class ApiService {
       }
     } catch (e) {
       if (e.toString().contains('SocketException')) {
-        print(
-            '[ApiService] loginUser() - SocketException / NoResponseException: $e');
+        print('[ApiService] loginUser() - NoResponseException: $e');
         throw NoResponseException(
-          'Unable to connect to $url. Check your network.',
-        );
+            'Unable to connect to $url. Check your network.');
       }
       print('[ApiService] loginUser() - Exception: $e');
       rethrow;
     }
   }
 
-  /// Adds a new fermentation entry to the server and saves it locally.
-  ///
-  /// Server endpoint is [POST] `$baseUrl/FermentationEntries`
-  ///
-  /// Requires:
-  /// - [token]: The Bearer token for authentication.
-  /// - [date]: The date of the fermentation entry.
-  /// - [density]: The density value.
-  /// - [wineId]: The ID of the wine.
+  /// Adds a new fermentation entry to the server and saves it locally if it fails.
   ///
   /// Throws:
   /// - [NoResponseException] on network/socket issues
@@ -115,10 +102,10 @@ class ApiService {
       'wineId': wineId,
     };
 
-    print('\n[ApiService] addFermentationEntry() - Starting request');
+    print('[ApiService] addFermentationEntry() - Starting request');
     print('[ApiService]  -> URL: $url');
     print('[ApiService]  -> Request body: $body');
-    print('Token used for authentication: $token');
+    print('[ApiService]  -> Token: $token');
 
     try {
       final response = await http.post(
@@ -136,14 +123,33 @@ class ApiService {
       if (response.statusCode == 201) {
         print('[ApiService] addFermentationEntry() - Success');
       } else {
-        print('[ApiService] Server error, saving locally');
+        print('[ApiService] Failed, saving locally');
+        await _databaseService.insertPendingEntry(body);
       }
     } catch (e) {
       print('[ApiService] Error connecting to server, saving locally');
+      await _databaseService.insertPendingEntry(body);
     }
+  }
 
-    // Save the entry locally to both database and file
-    await _saveToLocalHistory(body);
+  /// Synchronizes pending entries with the server.
+  Future<void> syncPendingEntries(String token) async {
+    print('[ApiService] syncPendingEntries() - Starting synchronization');
+    final pendingEntries = await _databaseService.getPendingEntries();
+    for (final entry in pendingEntries) {
+      try {
+        await addFermentationEntry(
+          token: token,
+          date: DateTime.parse(entry['date']),
+          density: entry['density'],
+          wineId: entry['wineId'],
+        );
+        await _databaseService.clearPendingEntry(entry['id']);
+      } catch (e) {
+        print('[ApiService] syncPendingEntries() - Error syncing entry: $e');
+      }
+    }
+    print('[ApiService] syncPendingEntries() - Completed synchronization');
   }
 
   /// Saves a fermentation entry to a local file for history tracking.

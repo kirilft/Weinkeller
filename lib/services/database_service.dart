@@ -21,7 +21,6 @@ class DatabaseService {
     return openDatabase(
       join(path, 'weinkeller.db'),
       onCreate: (db, version) async {
-        // Create a table to store pending data
         await db.execute('''
           CREATE TABLE pending_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,8 +44,18 @@ class DatabaseService {
     return await db.query('pending_entries');
   }
 
-  Future<int> deletePendingEntry(int id) async {
+  Future<int> getPendingChangesCount() async {
+    final entries = await getPendingEntries();
+    return entries.length;
+  }
+
+  Future<void> clearPendingEntry(int id) async {
     final db = await database;
-    return await db.delete('pending_entries', where: 'id = ?', whereArgs: [id]);
+    await db.delete('pending_entries', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> clearAllPendingEntries() async {
+    final db = await database;
+    await db.delete('pending_entries');
   }
 }

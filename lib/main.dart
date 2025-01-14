@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'dart:async'; // For runZonedGuarded
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,14 +21,14 @@ import 'package:weinkeller/pages/qr_result.dart';
 import 'package:weinkeller/services/theme_provider.dart';
 
 Future<void> main() async {
-  // Make sure widgets are bound before using shared prefs or such.
   WidgetsFlutterBinding.ensureInitialized();
 
   // Use runZonedGuarded to catch all unhandled errors for troubleshooting/logging
   runZonedGuarded(() async {
     // Load the saved baseUrl (if any) from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    final savedBaseUrl = prefs.getString('baseUrl') ?? '';
+    final savedBaseUrl =
+        prefs.getString('baseUrl') ?? 'http://localhost:80/api';
 
     // Create the ApiService with the saved baseUrl
     final apiService = ApiService(baseUrl: savedBaseUrl);
@@ -38,15 +36,10 @@ Future<void> main() async {
     runApp(
       MultiProvider(
         providers: [
-          // Provide the ApiService
-          Provider<ApiService>(
-            create: (_) => apiService,
-          ),
-          // Provide AuthService
+          Provider<ApiService>(create: (_) => apiService),
           ChangeNotifierProvider<AuthService>(
             create: (_) => AuthService(apiService: apiService),
           ),
-          // Provide ThemeProvider
           ChangeNotifierProvider<ThemeProvider>(
             create: (_) => ThemeProvider(),
           ),
@@ -55,13 +48,7 @@ Future<void> main() async {
       ),
     );
   }, (error, stackTrace) {
-    if (error is WrongPasswordException) {
-      // We can log it or send to analytics
-      debugPrint(
-          'GLOBAL ERROR HANDLER: WrongPasswordException -> ${error.message}');
-    } else {
-      debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
-    }
+    debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
   });
 }
 
@@ -77,7 +64,13 @@ class MyWeinkellerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
-        '/': (context) => const HomeScreen(),
+        '/': (context) => Consumer<AuthService>(
+              builder: (context, authService, _) {
+                return authService.isLoggedIn
+                    ? const HomeScreen()
+                    : const LoginPage();
+              },
+            ),
         '/login': (context) => const LoginPage(),
         '/password_reset': (context) => const PasswordResetPage(),
         '/account': (context) => const AccountPage(),

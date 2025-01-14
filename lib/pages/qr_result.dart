@@ -29,7 +29,10 @@ class _QRResultPageState extends State<QRResultPage> {
 
     if (token == null || token.isEmpty) {
       _showErrorDialog(
-          'Authentication Error', 'You must be logged in to submit data.');
+        'Authentication Error',
+        'You must be logged in to submit data.',
+        showLoginButton: true, // pass this flag
+      );
       return;
     }
 
@@ -77,17 +80,32 @@ class _QRResultPageState extends State<QRResultPage> {
   }
 
   /// Displays an error dialog.
-  void _showErrorDialog(String title, String message) {
+  void _showErrorDialog(
+    String title,
+    String message, {
+    bool showLoginButton = false,
+  }) {
     showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
-          content: SingleChildScrollView(child: Text(message)),
+          content: SingleChildScrollView(
+            child: Text(message),
+          ),
           actions: [
+            // Conditionally display a "Login" button.
+            if (showLoginButton)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pushNamed('/login'); // Go to login page
+                },
+                child: const Text('Login'),
+              ),
             TextButton(
-              child: const Text('OK'),
               onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
             ),
           ],
         );

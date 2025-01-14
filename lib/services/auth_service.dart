@@ -6,59 +6,73 @@ import 'package:weinkeller/services/api_service.dart';
 
 /// A service that manages user authentication (login/logout) and stores tokens.
 class AuthService extends ChangeNotifier {
-  // Reference to your API service (which calls the backend endpoints).
+  // Reference to the API service (which calls the backend endpoints).
   final ApiService _apiService;
 
-  // We'll use secure storage for persisting tokens.
+  // Secure storage for persisting tokens across sessions.
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
-  // Keep a local copy of the token in memory.
+  // Token stored in memory for quick access.
   String? _token;
   String? get token => _token;
 
-  // A quick getter to see if the user is logged in (has a token).
+  // A quick getter to check if the user is logged in (has a valid token).
   bool get isLoggedIn => _token != null;
 
   /// Constructor requires an instance of ApiService.
   ///
-  /// Example usage in main.dart or elsewhere:
-  ///   final apiService = ApiService();
+  /// Example:
   ///   final authService = AuthService(apiService: apiService);
   AuthService({required ApiService apiService}) : _apiService = apiService {
     // Optionally load a saved token when this service is first created.
     _loadSavedToken();
   }
 
-  /// Step 2a: Load any existing token from secure storage (if exists).
+  /// Loads the token from secure storage (if it exists) during initialization.
   Future<void> _loadSavedToken() async {
-    final savedToken = await _secureStorage.read(key: 'auth_token');
-    if (savedToken != null && savedToken.isNotEmpty) {
-      _token = savedToken;
-      notifyListeners(); // Let listeners know we have a token now
+    try {
+      final savedToken = await _secureStorage.read(key: 'auth_token');
+      if (savedToken != null && savedToken.isNotEmpty) {
+        _token = savedToken;
+        notifyListeners(); // Notify listeners that the token is loaded.
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Error loading saved token: $e');
     }
   }
 
-  /// Step 2b: Login the user by calling the API service, then store the token.
-  /// On success, we save the token in secure storage for future sessions.
+  /// Logs in the user by calling the API service, then stores the token.
+  ///
+  /// On success:
+  /// - Saves the token in memory and secure storage.
+  /// - Notifies listeners to update the app state.
   Future<void> login(String email, String password) async {
-    // This calls the API to do an actual login request.
-    // api_service.loginUser(...) should return a token or throw an exception.
-    final fetchedToken = await _apiService.loginUser(email, password);
+    try {
+      // Call the API to authenticate and retrieve a token.
+      final fetchedToken = await _apiService.loginUser(email, password);
 
-    // If we got here, login succeeded and we have a token.
-    _token = fetchedToken;
+      // If successful, save the token.
+      _token = fetchedToken;
+      await _secureStorage.write(key: 'auth_token', value: fetchedToken);
 
-    // Save it for future use.
-    await _secureStorage.write(key: 'auth_token', value: fetchedToken);
-
-    // Notify the UI (e.g., to show a success message).
-    notifyListeners();
+      // Notify listeners to reflect the updated login state.
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AuthService] Login failed: $e');
+      rethrow; // Re-throw the exception to handle it in the UI.
+    }
   }
 
-  /// Step 2c: Optional logout. Clears the token from memory and secure storage.
+  /// Logs out the user by clearing the token from memory and secure storage.
+  ///
+  /// Notifies listeners to reflect the logout state.
   Future<void> logout() async {
-    _token = null;
-    await _secureStorage.delete(key: 'auth_token');
-    notifyListeners();
+    try {
+      _token = null;
+      await _secureStorage.delete(key: 'auth_token');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AuthService] Logout failed: $e');
+    }
   }
 }
