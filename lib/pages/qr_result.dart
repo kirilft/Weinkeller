@@ -8,7 +8,7 @@ class QRResultPage extends StatefulWidget {
 
   final String qrCode;
 
-  const QRResultPage({Key? key, required this.qrCode}) : super(key: key);
+  const QRResultPage({super.key, required this.qrCode});
 
   @override
   State<QRResultPage> createState() => _QRResultPageState();
