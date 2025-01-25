@@ -1,30 +1,27 @@
-import 'dart:async'; // For runZonedGuarded
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 
-// Services
-import 'package:weinkeller/services/api_service.dart';
-import 'package:weinkeller/services/auth_service.dart';
+import 'services/api_service.dart';
+import 'services/auth_service.dart';
+import 'services/theme_provider.dart';
 
-// Pages
-import 'package:weinkeller/pages/account.dart';
-import 'package:weinkeller/pages/changelog.dart';
-import 'package:weinkeller/pages/history.dart';
-import 'package:weinkeller/pages/home_screen.dart';
-import 'package:weinkeller/pages/login.dart';
-import 'package:weinkeller/pages/password_reset.dart';
-import 'package:weinkeller/pages/settings.dart';
-import 'package:weinkeller/pages/qr_result.dart';
-
-// Providers
-import 'package:weinkeller/services/theme_provider.dart';
+import 'pages/account.dart';
+import 'pages/changelog.dart';
+import 'pages/history.dart';
+import 'pages/home_screen.dart';
+import 'pages/login.dart';
+import 'pages/password_reset.dart';
+import 'pages/settings.dart';
+import 'pages/qr_result.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Use runZonedGuarded to catch all unhandled errors for troubleshooting/logging
+  // Use runZonedGuarded to catch unhandled errors.
   runZonedGuarded(() async {
+    // Initialize Flutter bindings **inside** this zone.
+    WidgetsFlutterBinding.ensureInitialized();
+
     // Load the saved baseUrl (if any) from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final savedBaseUrl =
@@ -48,6 +45,7 @@ Future<void> main() async {
       ),
     );
   }, (error, stackTrace) {
+    // Global error handler for unhandled exceptions.
     debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
   });
 }
@@ -58,7 +56,6 @@ class MyWeinkellerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
     return MaterialApp(
       title: 'Weinkeller',
       debugShowCheckedModeBanner: false,
@@ -84,10 +81,12 @@ class MyWeinkellerApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.light,
         primarySwatch: Colors.blue,
+        fontFamily: 'SFProDisplay',
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.blue,
+        fontFamily: 'SFProDisplay',
       ),
       themeMode: themeProvider.themeMode,
     );

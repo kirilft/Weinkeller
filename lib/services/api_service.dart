@@ -97,7 +97,7 @@ class ApiService {
     required int wineId,
   }) async {
     final url = Uri.parse('$baseUrl/FermentationEntries');
-    final DateFormat formatter = DateFormat("yyyy-MM-ddTHH:mm:ss.SSS");
+    final DateFormat formatter = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
     final body = {
       'date':
           formatter.format(date), // Format with three decimals in milliseconds
@@ -108,30 +108,38 @@ class ApiService {
     print('[ApiService] addFermentationEntry() - Starting request');
     print('[ApiService]  -> URL: $url');
     print('[ApiService]  -> Request body: $body');
-    print('[ApiService]  -> Token: $token');
+    print('[ApiService]  -> Token: Bearer $token');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      );
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(Duration(seconds: 10));
 
       print('[ApiService]  <- Response code: ${response.statusCode}');
       print('[ApiService]  <- Response body: ${response.body}');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         print('[ApiService] addFermentationEntry() - Success');
+        await _saveToLocalHistory(body);
       } else {
         print('[ApiService] Failed, saving locally');
         await _databaseService.insertPendingEntry(body);
       }
     } catch (e) {
-      print('[ApiService] Error connecting to server, saving locally');
-      await _databaseService.insertPendingEntry(body);
+      if (e is SocketException || e is NoResponseException) {
+        print('[ApiService] Network error, saving locally');
+        await _databaseService.insertPendingEntry(body);
+      } else {
+        print('[ApiService] Unexpected error: $e');
+        rethrow; // Optionally, rethrow or handle differently
+      }
     }
   }
 

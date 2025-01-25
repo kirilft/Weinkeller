@@ -28,6 +28,17 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/background/weinkeller.jpg
+  fonts:
+    - family: SFProDisplay
+      fonts:
+        - asset: assets/fonts/SFProDisplay-Regular.otf
+        - asset: assets/fonts/SFProDisplay-Bold.otf
+          weight: 700
+        - asset: assets/fonts/SFProDisplay-Italic.otf
+          style: italic
+
 
 flutter_launcher_icons:
   ios: true

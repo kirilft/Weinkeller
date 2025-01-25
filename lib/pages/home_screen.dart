@@ -196,9 +196,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Stack(
         children: [
+          // Background image
           Container(
-            color: isDarkMode ? Colors.grey[900] : const Color(0xFF00BFA5),
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/background/weinkeller.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
+          // Semi-transparent overlay for dark mode
+          if (isDarkMode)
+            Container(
+              color: Color.alphaBlend(
+                Colors.black.withAlpha(80), // 10% opacity (25/255)
+                Colors.transparent,
+              ),
+            ),
           if (_errorMessage != null)
             Center(
               child: Padding(
