@@ -3,6 +3,7 @@ import 'dart:io'; // For file I/O
 import 'package:path_provider/path_provider.dart'; // For accessing local file paths
 import 'package:http/http.dart' as http;
 import 'package:weinkeller/services/database_service.dart';
+import 'package:intl/intl.dart';
 
 /// Custom exceptions in case the server responds with specific errors.
 class WrongPasswordException implements Exception {
@@ -96,8 +97,10 @@ class ApiService {
     required int wineId,
   }) async {
     final url = Uri.parse('$baseUrl/FermentationEntries');
+    final DateFormat formatter = DateFormat("yyyy-MM-ddTHH:mm:ss.SSS");
     final body = {
-      'date': date.toIso8601String(),
+      'date':
+          formatter.format(date), // Format with three decimals in milliseconds
       'density': density,
       'wineId': wineId,
     };
