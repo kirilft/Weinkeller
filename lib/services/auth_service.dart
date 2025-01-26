@@ -1,78 +1,84 @@
-// lib/services/auth_service.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:weinkeller/services/api_service.dart';
 
-/// A service that manages user authentication (login/logout) and stores tokens.
+/// Manages authentication tokens and the current API location (base URL).
+/// Notifies listeners whenever values change, allowing the UI to react in real time.
 class AuthService extends ChangeNotifier {
-  // Reference to the API service (which calls the backend endpoints).
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final ApiService _apiService;
 
-  // Secure storage for persisting tokens across sessions.
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-
-  // Token stored in memory for quick access.
+  // In-memory token and base URL
   String? _token;
   String? get token => _token;
 
-  // A quick getter to check if the user is logged in (has a valid token).
-  bool get isLoggedIn => _token != null;
+  String _apiLocation = '';
+  String get apiLocation => _apiLocation;
 
-  /// Constructor requires an instance of ApiService.
-  ///
-  /// Example:
-  ///   final authService = AuthService(apiService: apiService);
-  AuthService({required ApiService apiService}) : _apiService = apiService {
-    // Optionally load a saved token when this service is first created.
-    _loadSavedToken();
+  // Quick check if user is logged in
+  bool get isLoggedIn => _token != null && _token!.isNotEmpty;
+
+  AuthService(this._apiService) {
+    _initialize();
   }
 
-  /// Loads the token from secure storage (if it exists) during initialization.
-  Future<void> _loadSavedToken() async {
+  /// Load saved token & base URL from secure storage on startup.
+  Future<void> _initialize() async {
     try {
+      // 1. Load auth token
       final savedToken = await _secureStorage.read(key: 'auth_token');
       if (savedToken != null && savedToken.isNotEmpty) {
         _token = savedToken;
-        notifyListeners(); // Notify listeners that the token is loaded.
+        _apiService.authToken = savedToken;
+      }
+
+      // 2. Load stored base URL
+      final savedApiLocation = await _secureStorage.read(key: 'api_location');
+      if (savedApiLocation != null && savedApiLocation.isNotEmpty) {
+        _apiLocation = savedApiLocation;
+        _apiService.baseUrl = savedApiLocation;
+      } else {
+        // Fallback default if none stored
+        _apiLocation = 'https://example.com/api';
+        _apiService.baseUrl = _apiLocation;
       }
     } catch (e) {
-      debugPrint('[AuthService] Error loading saved token: $e');
+      debugPrint('[AuthService] _initialize error: $e');
     }
+    notifyListeners();
   }
 
-  /// Logs in the user by calling the API service, then stores the token.
-  ///
-  /// On success:
-  /// - Saves the token in memory and secure storage.
-  /// - Notifies listeners to update the app state.
+  /// Update the API location (base URL) at runtime without restarting the app.
+  Future<void> updateApiLocation(String newLocation) async {
+    _apiLocation = newLocation;
+    _apiService.baseUrl = newLocation;
+    // Persist in secure storage
+    await _secureStorage.write(key: 'api_location', value: newLocation);
+    notifyListeners();
+  }
+
+  /// Attempt a login using the ApiService (example).
+  /// On success, store token and persist it securely.
   Future<void> login(String email, String password) async {
     try {
-      // Call the API to authenticate and retrieve a token.
       final fetchedToken = await _apiService.loginUser(email, password);
-
-      // If successful, save the token.
       _token = fetchedToken;
-      await _secureStorage.write(key: 'auth_token', value: fetchedToken);
+      _apiService.authToken = fetchedToken;
 
-      // Notify listeners to reflect the updated login state.
+      // Save token to secure storage
+      await _secureStorage.write(key: 'auth_token', value: fetchedToken);
       notifyListeners();
     } catch (e) {
-      debugPrint('[AuthService] Login failed: $e');
-      rethrow; // Re-throw the exception to handle it in the UI.
+      debugPrint('[AuthService] login error: $e');
+      rethrow; // Let the caller handle errors
     }
   }
 
-  /// Logs out the user by clearing the token from memory and secure storage.
-  ///
-  /// Notifies listeners to reflect the logout state.
+  /// Logs out by clearing the token (in memory + secure storage).
   Future<void> logout() async {
-    try {
-      _token = null;
-      await _secureStorage.delete(key: 'auth_token');
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[AuthService] Logout failed: $e');
-    }
+    _token = null;
+    _apiService.authToken = null;
+    await _secureStorage.delete(key: 'auth_token');
+    notifyListeners();
   }
 }

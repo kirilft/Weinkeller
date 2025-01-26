@@ -16,36 +16,31 @@ import 'pages/password_reset.dart';
 import 'pages/settings.dart';
 import 'pages/qr_result.dart';
 
-Future<void> main() async {
-  // Use runZonedGuarded to catch unhandled errors.
+void main() {
+  // Use runZonedGuarded to catch unhandled errors globally
   runZonedGuarded(() async {
-    // Initialize Flutter bindings **inside** this zone.
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Load the saved baseUrl (if any) from SharedPreferences
+    // Load the saved base URL (if any) from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final savedBaseUrl =
         prefs.getString('baseUrl') ?? 'http://localhost:80/api';
 
-    // Create the ApiService with the saved baseUrl
+    // Create the services
     final apiService = ApiService(baseUrl: savedBaseUrl);
+    final authService = AuthService(apiService);
 
     runApp(
       MultiProvider(
         providers: [
           Provider<ApiService>(create: (_) => apiService),
-          ChangeNotifierProvider<AuthService>(
-            create: (_) => AuthService(apiService: apiService),
-          ),
-          ChangeNotifierProvider<ThemeProvider>(
-            create: (_) => ThemeProvider(),
-          ),
+          ChangeNotifierProvider<AuthService>(create: (_) => authService),
+          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ],
         child: const MyWeinkellerApp(),
       ),
     );
   }, (error, stackTrace) {
-    // Global error handler for unhandled exceptions.
     debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
   });
 }
