@@ -24,7 +24,7 @@ void main() {
     // Load the saved base URL (if any) from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final savedBaseUrl =
-        prefs.getString('baseUrl') ?? 'http://localhost:80/api';
+        prefs.getString('baseUrl') ?? 'http://api.kasai.tech/api';
 
     // Create the services
     final apiService = ApiService(baseUrl: savedBaseUrl);
