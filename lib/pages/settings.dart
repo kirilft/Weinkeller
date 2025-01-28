@@ -1,9 +1,10 @@
 // lib/pages/settings.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-import 'package:weinkeller/services/theme_provider.dart'; // Corrected import path
+
+import 'package:weinkeller/config/theme.dart';
+import 'package:weinkeller/services/auth_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -23,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadSettings();
   }
 
-  /// Loads the saved base URL from SharedPreferences; defaults to an empty string if none found.
+  /// Loads the saved base URL from SharedPreferences
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final storedBaseUrl = prefs.getString('baseUrl') ?? '';
@@ -34,12 +35,34 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  /// Saves the current text in _baseUrlController to SharedPreferences.
+  /// Compares the new baseURL with the old one.
+  /// If changed, we clear the auth token via AuthService to prompt re-login next time.
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('baseUrl', _baseUrlController.text);
+    final oldBaseUrl = prefs.getString('baseUrl') ?? '';
 
-    // Provide user feedback on successful save
+    final newBaseUrl = _baseUrlController.text.trim();
+    if (newBaseUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Base URL cannot be empty')),
+      );
+      return;
+    }
+
+    // If baseURL changed, clear the existing token so user must reauthenticate
+    if (oldBaseUrl != newBaseUrl) {
+      debugPrint('SETTINGS: BaseURL changed from $oldBaseUrl to $newBaseUrl');
+      final authService = context.read<AuthService>();
+      await authService.clearAuthToken();
+    } else {
+      debugPrint(
+          'SETTINGS: BaseURL is unchanged ($oldBaseUrl). Token remains valid.');
+    }
+
+    // Save the new baseURL
+    await prefs.setString('baseUrl', newBaseUrl);
+
+    // Notify user that settings are saved
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Settings saved!')),
@@ -56,13 +79,11 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      // Show a loading indicator while fetching current settings
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Access the ThemeProvider
     final themeProvider = Provider.of<ThemeProvider>(context);
     ThemeMode currentTheme = themeProvider.themeMode;
 
@@ -72,17 +93,16 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // Go back to previous screen
+            Navigator.pop(context); // Go back
           },
         ),
       ),
       body: SingleChildScrollView(
-        // Allows scrolling if content overflows
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Existing Base URL Settings
+            // --- API Settings ---
             const Text(
               'API Settings',
               style: TextStyle(
@@ -109,10 +129,11 @@ class _SettingsPageState extends State<SettingsPage> {
               'the ApiService to take full effect.',
               style: TextStyle(color: Colors.grey),
             ),
+
+            // --- Theme Settings ---
             const SizedBox(height: 40),
             const Divider(),
             const SizedBox(height: 20),
-            // New Theme Settings
             const Text(
               'Appearance',
               style: TextStyle(

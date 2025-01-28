@@ -1,4 +1,3 @@
-/// Exception for when there is no response from the server or network issues.
 class NoResponseException implements Exception {
   final String message;
 
@@ -6,4 +5,11 @@ class NoResponseException implements Exception {
 
   @override
   String toString() => 'NoResponseException: $message';
+}
+
+// lib/exceptions/wrong_password_exception.dart
+
+class WrongPasswordException implements Exception {
+  final String message;
+  WrongPasswordException(this.message);
 }

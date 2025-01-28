@@ -23,7 +23,7 @@ class _QRResultPageState extends State<QRResultPage> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
 
-    final token = authService.token; // Retrieve the stored auth token
+    final token = authService.authToken; // Retrieve the stored auth token
     final qrCode = widget.qrCode;
     final densityInput = _densityController.text.trim();
 
@@ -31,7 +31,7 @@ class _QRResultPageState extends State<QRResultPage> {
       _showErrorDialog(
         'Authentication Error',
         'You must be logged in to submit data.',
-        showLoginButton: true, // pass this flag
+        showLoginButton: true,
       );
       return;
     }
@@ -50,7 +50,7 @@ class _QRResultPageState extends State<QRResultPage> {
       return;
     }
 
-    // Convert QR code to wineId (assuming it's numeric, adjust as needed)
+    // Convert QR code to wineId (assuming it's numeric).
     int wineId;
     try {
       wineId = int.parse(qrCode);
@@ -59,7 +59,7 @@ class _QRResultPageState extends State<QRResultPage> {
       return;
     }
 
-    final DateTime date = DateTime.now(); // Use current date
+    final DateTime date = DateTime.now();
 
     setState(() => _isSubmitting = true);
 
@@ -70,7 +70,6 @@ class _QRResultPageState extends State<QRResultPage> {
         density: density,
         wineId: wineId,
       );
-
       _showSuccessDialog('Fermentation entry added successfully!');
     } catch (e) {
       _showErrorDialog('Submission Error', e.toString());
@@ -94,11 +93,10 @@ class _QRResultPageState extends State<QRResultPage> {
             child: Text(message),
           ),
           actions: [
-            // Conditionally display a "Login" button.
             if (showLoginButton)
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pop(); // Close dialog
                   Navigator.of(context).pushNamed('/login'); // Go to login page
                 },
                 child: const Text('Login'),
@@ -125,8 +123,8 @@ class _QRResultPageState extends State<QRResultPage> {
             TextButton(
               child: const Text('OK'),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                Navigator.of(context).pop(); // Go back to the previous screen
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous screen
               },
             ),
           ],

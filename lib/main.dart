@@ -1,52 +1,41 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'config/routes.dart';
+import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
-import 'services/theme_provider.dart';
-
-import 'pages/account.dart';
-import 'pages/changelog.dart';
-import 'pages/history.dart';
-import 'pages/home_screen.dart';
-import 'pages/login.dart';
-import 'pages/password_reset.dart';
-import 'pages/settings.dart';
-import 'pages/qr_result.dart';
 
 Future<void> main() async {
-  // Use runZonedGuarded to catch unhandled errors.
-  runZonedGuarded(() async {
-    // Initialize Flutter bindings **inside** this zone.
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
-    // Load the saved baseUrl (if any) from SharedPreferences
+  runZonedGuarded(() async {
+    // Load the baseURL from SharedPreferences (or use a default)
     final prefs = await SharedPreferences.getInstance();
     final savedBaseUrl =
         prefs.getString('baseUrl') ?? 'http://localhost:80/api';
+    debugPrint('MAIN: Loaded baseURL from prefs: $savedBaseUrl');
 
-    // Create the ApiService with the saved baseUrl
+    // Create an ApiService instance using the saved baseURL
     final apiService = ApiService(baseUrl: savedBaseUrl);
+
+    // Create AuthService, which will also check for a stored token
+    final authService = AuthService(apiService: apiService);
 
     runApp(
       MultiProvider(
         providers: [
           Provider<ApiService>(create: (_) => apiService),
-          ChangeNotifierProvider<AuthService>(
-            create: (_) => AuthService(apiService: apiService),
-          ),
-          ChangeNotifierProvider<ThemeProvider>(
-            create: (_) => ThemeProvider(),
-          ),
+          ChangeNotifierProvider<AuthService>(create: (_) => authService),
+          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ],
         child: const MyWeinkellerApp(),
       ),
     );
-  }, (error, stackTrace) {
-    // Global error handler for unhandled exceptions.
-    debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
+  }, (error, stack) {
+    debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stack');
   });
 }
 
@@ -56,39 +45,23 @@ class MyWeinkellerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: 'Weinkeller',
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      routes: {
-        '/': (context) => Consumer<AuthService>(
-              builder: (context, authService, _) {
-                return authService.isLoggedIn
-                    ? const HomeScreen()
-                    : const LoginPage();
-              },
-            ),
-        '/login': (context) => const LoginPage(),
-        '/password_reset': (context) => const PasswordResetPage(),
-        '/account': (context) => const AccountPage(),
-        '/settings': (context) => const SettingsPage(),
-        '/history': (context) => const HistoryPage(),
-        '/changelog': (context) => const ChangelogPage(),
-        '/qrResult': (context) => QRResultPage(
-              qrCode: ModalRoute.of(context)!.settings.arguments as String,
-            ),
-      },
-      theme: ThemeData(
-        brightness: Brightness.light,
-        primarySwatch: Colors.blue,
-        fontFamily: 'SFProDisplay',
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
-        fontFamily: 'SFProDisplay',
-      ),
+      initialRoute: AppRoutes.initialRoute,
+      routes: AppRoutes.routes,
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeProvider.themeMode,
+    );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    return ThemeData(
+      brightness: brightness,
+      primarySwatch: Colors.blue,
+      fontFamily: 'SFProDisplay',
     );
   }
 }

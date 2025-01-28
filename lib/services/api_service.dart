@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart'; // For accessing local file p
 import 'package:http/http.dart' as http;
 import 'package:weinkeller/services/database_service.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart'; // for ChangeNotifier, debugPrint, etc.
 
 /// Custom exceptions in case the server responds with specific errors.
 class WrongPasswordException implements Exception {
@@ -25,12 +26,21 @@ class NoResponseException implements Exception {
 /// The main API service class.
 ///
 /// Handles user authentication, fermentation entries, QR data, and local history.
-class ApiService {
-  final String baseUrl;
+/// We wrap it with [ChangeNotifier] to allow dynamic baseUrl changes if needed.
+class ApiService extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
 
-  /// Constructor to initialize the base URL.
-  ApiService({required this.baseUrl});
+  // We store the base URL in a variable so it can be updated at runtime if needed.
+  String _baseUrl;
+  String get baseUrl => _baseUrl;
+  set baseUrl(String newUrl) {
+    _baseUrl = newUrl;
+    debugPrint('[ApiService] baseUrl updated to $_baseUrl');
+    notifyListeners();
+  }
+
+  /// Constructor requires an initial base URL.
+  ApiService({required String baseUrl}) : _baseUrl = baseUrl;
 
   /// Logs in a user and returns a token if successful.
   ///
@@ -40,9 +50,9 @@ class ApiService {
   /// - [Exception] for other server errors
   Future<String> loginUser(String email, String password) async {
     final url = Uri.parse('$baseUrl/Users/Login');
-    print('[ApiService] loginUser() - Starting request');
-    print('[ApiService]  -> URL: $url');
-    print(
+    debugPrint('[ApiService] loginUser() - Starting request');
+    debugPrint('[ApiService]  -> URL: $url');
+    debugPrint(
         '[ApiService]  -> Sending JSON: {"email": "$email", "password": "******"}');
 
     try {
@@ -52,23 +62,23 @@ class ApiService {
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      print('[ApiService]  <- Response code: ${response.statusCode}');
-      print('[ApiService]  <- Response body: ${response.body}');
+      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
+      debugPrint('[ApiService]  <- Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
         if (token == null || token.isEmpty) {
-          print('[ApiService] loginUser() - No token in response!');
+          debugPrint('[ApiService] loginUser() - No token in response!');
           throw Exception('Login failed: No token returned by the server.');
         }
-        print('[ApiService] loginUser() - Success, got token');
+        debugPrint('[ApiService] loginUser() - Success, got token');
         return token;
       } else if (response.statusCode == 401) {
-        print('[ApiService] loginUser() - WrongPasswordException thrown');
+        debugPrint('[ApiService] loginUser() - WrongPasswordException thrown');
         throw WrongPasswordException('Incorrect email or password.');
       } else {
-        print(
+        debugPrint(
             '[ApiService] loginUser() - Unexpected status: ${response.statusCode}');
         throw Exception(
           'Login failed (status ${response.statusCode}):\n${response.body}',
@@ -76,11 +86,11 @@ class ApiService {
       }
     } catch (e) {
       if (e.toString().contains('SocketException')) {
-        print('[ApiService] loginUser() - NoResponseException: $e');
+        debugPrint('[ApiService] loginUser() - NoResponseException: $e');
         throw NoResponseException(
             'Unable to connect to $url. Check your network.');
       }
-      print('[ApiService] loginUser() - Exception: $e');
+      debugPrint('[ApiService] loginUser() - Exception: $e');
       rethrow;
     }
   }
@@ -99,16 +109,15 @@ class ApiService {
     final url = Uri.parse('$baseUrl/FermentationEntries');
     final DateFormat formatter = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
     final body = {
-      'date':
-          formatter.format(date), // Format with three decimals in milliseconds
+      'date': formatter.format(date), // "yyyy-MM-dd'T'HH:mm:ss.SSS"
       'density': density,
       'wineId': wineId,
     };
 
-    print('[ApiService] addFermentationEntry() - Starting request');
-    print('[ApiService]  -> URL: $url');
-    print('[ApiService]  -> Request body: $body');
-    print('[ApiService]  -> Token: Bearer $token');
+    debugPrint('[ApiService] addFermentationEntry() - Starting request');
+    debugPrint('[ApiService]  -> URL: $url');
+    debugPrint('[ApiService]  -> Request body: $body');
+    debugPrint('[ApiService]  -> Token: Bearer $token');
 
     try {
       final response = await http
@@ -120,24 +129,24 @@ class ApiService {
             },
             body: jsonEncode(body),
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(const Duration(seconds: 10));
 
-      print('[ApiService]  <- Response code: ${response.statusCode}');
-      print('[ApiService]  <- Response body: ${response.body}');
+      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
+      debugPrint('[ApiService]  <- Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('[ApiService] addFermentationEntry() - Success');
+        debugPrint('[ApiService] addFermentationEntry() - Success');
         await _saveToLocalHistory(body);
       } else {
-        print('[ApiService] Failed, saving locally');
+        debugPrint('[ApiService] Failed, saving locally');
         await _databaseService.insertPendingEntry(body);
       }
     } catch (e) {
       if (e is SocketException || e is NoResponseException) {
-        print('[ApiService] Network error, saving locally');
+        debugPrint('[ApiService] Network error, saving locally');
         await _databaseService.insertPendingEntry(body);
       } else {
-        print('[ApiService] Unexpected error: $e');
+        debugPrint('[ApiService] Unexpected error: $e');
         rethrow; // Optionally, rethrow or handle differently
       }
     }
@@ -145,7 +154,7 @@ class ApiService {
 
   /// Synchronizes pending entries with the server.
   Future<void> syncPendingEntries(String token) async {
-    print('[ApiService] syncPendingEntries() - Starting synchronization');
+    debugPrint('[ApiService] syncPendingEntries() - Starting synchronization');
     final pendingEntries = await _databaseService.getPendingEntries();
     for (final entry in pendingEntries) {
       try {
@@ -157,10 +166,11 @@ class ApiService {
         );
         await _databaseService.clearPendingEntry(entry['id']);
       } catch (e) {
-        print('[ApiService] syncPendingEntries() - Error syncing entry: $e');
+        debugPrint(
+            '[ApiService] syncPendingEntries() - Error syncing entry: $e');
       }
     }
-    print('[ApiService] syncPendingEntries() - Completed synchronization');
+    debugPrint('[ApiService] syncPendingEntries() - Completed synchronization');
   }
 
   /// Saves a fermentation entry to a local file for history tracking.
@@ -168,12 +178,12 @@ class ApiService {
     final file = await _getLocalFile();
     List<Map<String, dynamic>> entries = await loadLocalHistory();
 
-    // Add the new entry to the existing list
+    // Add the new entry
     entries.add(entry);
 
-    // Write the updated list back to the file
+    // Write the updated list to the file
     await file.writeAsString(jsonEncode(entries));
-    print('[ApiService] _saveToLocalHistory() - Entry saved locally');
+    debugPrint('[ApiService] _saveToLocalHistory() - Entry saved locally');
   }
 
   /// Loads all fermentation entries from the local file for the history page.
@@ -186,7 +196,7 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      print('[ApiService] loadLocalHistory() - Error: $e');
+      debugPrint('[ApiService] loadLocalHistory() - Error: $e');
       return [];
     }
   }
