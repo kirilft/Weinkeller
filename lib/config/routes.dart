@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../pages/home_screen.dart';
 import '../pages/login.dart';
-import '../components/password_reset.dart';
-import '../pages/account.dart';
+import '../pages/welcome_screen.dart'; // <--- import the new file
 import '../pages/settings.dart';
+import '../pages/account.dart';
 import '../pages/history.dart';
 import '../pages/changelog.dart';
 import '../components/qr_result.dart';
@@ -19,17 +19,13 @@ class AppRoutes {
       '/': (context) => Consumer<AuthService>(
             builder: (context, authService, _) {
               return authService.isLoggedIn
-                  ? const HomeScreen()
-                  : const LoginPage();
+                  ? const HomeScreen() // If token found => go home
+                  : const WelcomeScreen(); // If no token => go welcome
             },
           ),
       '/login': (context) => const LoginPage(),
-      '/password_reset': (context) => const PasswordResetPage(),
-      '/account': (context) => Consumer<AuthService>(
-            builder: (context, auth, _) =>
-                auth.isLoggedIn ? const AccountPage() : const LoginPage(),
-          ),
       '/settings': (context) => const SettingsPage(),
+      '/account': (context) => const AccountPage(),
       '/history': (context) => const HistoryPage(),
       '/changelog': (context) => const ChangelogPage(),
       '/qrResult': (context) {

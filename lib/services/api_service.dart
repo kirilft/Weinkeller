@@ -107,9 +107,9 @@ class ApiService extends ChangeNotifier {
     required int wineId,
   }) async {
     final url = Uri.parse('$baseUrl/FermentationEntries');
-    final DateFormat formatter = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
     final body = {
-      'date': formatter.format(date), // "yyyy-MM-dd'T'HH:mm:ss.SSS"
+      'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+          .format(date), // "yyyy-MM-dd'T'HH:mm:ss.SSS"
       'density': density,
       'wineId': wineId,
     };
