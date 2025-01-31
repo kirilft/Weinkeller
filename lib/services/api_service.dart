@@ -34,7 +34,13 @@ class ApiService extends ChangeNotifier {
   String _baseUrl;
   String get baseUrl => _baseUrl;
   set baseUrl(String newUrl) {
-    _baseUrl = newUrl;
+    if (newUrl.isEmpty) {
+      debugPrint(
+          '[ApiService] WARNING: Provided baseUrl is empty, using fallback');
+      _baseUrl = 'http://localhost:80/api'; // Or some fallback
+    } else {
+      _baseUrl = newUrl;
+    }
     debugPrint('[ApiService] baseUrl updated to $_baseUrl');
     notifyListeners();
   }

@@ -1,10 +1,10 @@
-// lib/pages/settings.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:weinkeller/config/theme.dart';
 import 'package:weinkeller/services/auth_service.dart';
+import 'package:weinkeller/services/api_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -24,23 +24,26 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadSettings();
   }
 
-  /// Loads the saved base URL from SharedPreferences
+  /// Loads the saved base URL from secure storage instead of SharedPreferences
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedBaseUrl = prefs.getString('baseUrl') ?? '';
+    const secureStorage = FlutterSecureStorage();
+    final storedBaseUrl = await secureStorage.read(key: 'baseUrl');
+    // fallback if none found
+    _baseUrlController.text = storedBaseUrl ?? 'http://localhost:80/api';
 
     setState(() {
-      _baseUrlController.text = storedBaseUrl;
       _isLoading = false;
     });
   }
 
-  /// Compares the new baseURL with the old one.
-  /// If changed, we clear the auth token via AuthService to prompt re-login next time.
-  Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final oldBaseUrl = prefs.getString('baseUrl') ?? '';
+  /// Validate the URL before saving
+  bool _isValidUrl(String url) {
+    final uri = Uri.tryParse(url);
+    return uri != null && uri.hasScheme && uri.host.isNotEmpty;
+  }
 
+  /// Saves new baseURL to secure storage, clears token if changed
+  Future<void> _saveSettings() async {
     final newBaseUrl = _baseUrlController.text.trim();
     if (newBaseUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,22 +51,34 @@ class _SettingsPageState extends State<SettingsPage> {
       );
       return;
     }
+    if (!_isValidUrl(newBaseUrl)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid URL format')),
+      );
+      return;
+    }
 
-    // If baseURL changed, clear the existing token so user must reauthenticate
+    const secureStorage = FlutterSecureStorage();
+    final oldBaseUrl = await secureStorage.read(key: 'baseUrl') ?? '';
+
     if (oldBaseUrl != newBaseUrl) {
       debugPrint('SETTINGS: BaseURL changed from $oldBaseUrl to $newBaseUrl');
+      // Clear the existing token so user must reauthenticate
       final authService = context.read<AuthService>();
       await authService.clearAuthToken();
+
+      // Also update the ApiService instance in-memory
+      final apiService = context.read<ApiService>();
+      apiService.baseUrl = newBaseUrl;
+
+      await secureStorage.write(key: 'baseUrl', value: newBaseUrl);
     } else {
       debugPrint(
           'SETTINGS: BaseURL is unchanged ($oldBaseUrl). Token remains valid.');
     }
 
-    // Save the new baseURL
-    await prefs.setString('baseUrl', newBaseUrl);
-
     // Notify user that settings are saved
-    if (context.mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Settings saved!')),
       );
@@ -85,7 +100,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     final themeProvider = Provider.of<ThemeProvider>(context);
-    ThemeMode currentTheme = themeProvider.themeMode;
+    final currentTheme = themeProvider.themeMode;
 
     return Scaffold(
       appBar: AppBar(

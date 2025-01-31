@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// NEW: import flutter_secure_storage
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'config/routes.dart';
 import 'config/theme.dart';
@@ -12,11 +13,17 @@ Future<void> main() async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    final prefs = await SharedPreferences.getInstance();
-    final savedBaseUrl =
-        prefs.getString('baseUrl') ?? 'http://localhost:80/api';
+    // Initialize secure storage
+    const secureStorage = FlutterSecureStorage();
 
+    // Attempt to read baseUrl from secure storage; fallback to a default if none is found
+    final savedBaseUrl =
+        await secureStorage.read(key: 'baseUrl') ?? 'http://localhost:80/api';
+
+    // Create the ApiService with the base URL
     final apiService = ApiService(baseUrl: savedBaseUrl);
+
+    // Create the AuthService with the ApiService
     final authService = AuthService(apiService: apiService);
 
     runApp(
@@ -25,8 +32,12 @@ Future<void> main() async {
           ChangeNotifierProvider<ApiService>(
             create: (_) => apiService,
           ),
-          ChangeNotifierProvider<AuthService>(create: (_) => authService),
-          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider<AuthService>(
+            create: (_) => authService,
+          ),
+          ChangeNotifierProvider<ThemeProvider>(
+            create: (_) => ThemeProvider(),
+          ),
         ],
         child: const MyWeinkellerApp(),
       ),

@@ -7,6 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.weinkeller"
+    compileSdkVersion 33
 
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -23,9 +24,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.weinkeller"
-        minSdk = 24
-        targetSdk = 35
+        applicationId "com.example.yourapp"  // Ensure this matches your namespace
+        minSdkVersion 21
+        targetSdkVersion 33
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

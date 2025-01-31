@@ -31,7 +31,6 @@ class _LoginPageState extends State<LoginPage> {
   /// Checks if the `baseUrl` is empty and navigates to the settings page.
   Future<void> _checkBaseUrl() async {
     final apiService = Provider.of<ApiService>(context, listen: false);
-
     if (apiService.baseUrl.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacementNamed(context, '/settings');
@@ -72,8 +71,8 @@ class _LoginPageState extends State<LoginPage> {
     final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
-      await authService.login(email, password);
-      if (authService.isLoggedIn) {
+      final success = await authService.login(email, password);
+      if (success && authService.isLoggedIn) {
         Navigator.pushReplacementNamed(context, '/');
       }
     } catch (e) {
@@ -102,7 +101,6 @@ class _LoginPageState extends State<LoginPage> {
           Padding(
             padding: const EdgeInsets.only(right: 24),
             child: IconButton(
-              // Remove explicit color so this icon adapts in dark/light modes
               icon: const Icon(
                 FontAwesomeIcons.gear,
                 size: 32,
