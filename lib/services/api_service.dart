@@ -26,7 +26,7 @@ class NoResponseException implements Exception {
 /// The main API service class.
 ///
 /// Handles user authentication, fermentation entries, QR data, and local history.
-/// We wrap it with [ChangeNotifier] to allow dynamic baseUrl changes if needed.
+/// Wrapped with [ChangeNotifier] to allow dynamic baseUrl changes.
 class ApiService extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
 
@@ -48,15 +48,50 @@ class ApiService extends ChangeNotifier {
   /// Constructor requires an initial base URL.
   ApiService({required String baseUrl}) : _baseUrl = baseUrl;
 
+  // ==========================================================================
+  // Public Wrapper Methods (Original API Interface)
+  // ==========================================================================
+
   /// Logs in a user and returns a token if successful.
+  ///
+  /// This method wraps the new internal implementation.
   ///
   /// Throws:
   /// - [WrongPasswordException] if status 401
   /// - [NoResponseException] on network/socket issues
   /// - [Exception] for other server errors
   Future<String> loginUser(String email, String password) async {
+    return await _loginUserNew(email, password);
+  }
+
+  /// Adds a new fermentation entry to the server and saves it locally if it fails.
+  ///
+  /// This method wraps the new internal implementation.
+  ///
+  /// Throws:
+  /// - [NoResponseException] on network/socket issues
+  /// - [Exception] for other server errors
+  Future<void> addFermentationEntry({
+    required String token,
+    required DateTime date,
+    required double density,
+    required int wineId,
+  }) async {
+    await _addFermentationEntryNew(
+      token: token,
+      date: date,
+      density: density,
+      wineId: wineId,
+    );
+  }
+
+  // ==========================================================================
+  // New Internal Implementations (Adapted to New Endpoints/DTOs)
+  // ==========================================================================
+
+  Future<String> _loginUserNew(String email, String password) async {
     final url = Uri.parse('$baseUrl/Users/Login');
-    debugPrint('[ApiService] loginUser() - Starting request');
+    debugPrint('[ApiService] _loginUserNew() - Starting request');
     debugPrint('[ApiService]  -> URL: $url');
     debugPrint(
         '[ApiService]  -> Sending JSON: {"email": "$email", "password": "******"}');
@@ -74,39 +109,35 @@ class ApiService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
-        if (token == null || token.isEmpty) {
-          debugPrint('[ApiService] loginUser() - No token in response!');
+        if (token == null || token.toString().isEmpty) {
+          debugPrint('[ApiService] _loginUserNew() - No token in response!');
           throw Exception('Login failed: No token returned by the server.');
         }
-        debugPrint('[ApiService] loginUser() - Success, got token');
-        return token;
+        debugPrint('[ApiService] _loginUserNew() - Success, got token');
+        return token.toString();
       } else if (response.statusCode == 401) {
-        debugPrint('[ApiService] loginUser() - WrongPasswordException thrown');
+        debugPrint(
+            '[ApiService] _loginUserNew() - WrongPasswordException thrown');
         throw WrongPasswordException('Incorrect email or password.');
       } else {
         debugPrint(
-            '[ApiService] loginUser() - Unexpected status: ${response.statusCode}');
+            '[ApiService] _loginUserNew() - Unexpected status: ${response.statusCode}');
         throw Exception(
           'Login failed (status ${response.statusCode}):\n${response.body}',
         );
       }
     } catch (e) {
       if (e.toString().contains('SocketException')) {
-        debugPrint('[ApiService] loginUser() - NoResponseException: $e');
+        debugPrint('[ApiService] _loginUserNew() - NoResponseException: $e');
         throw NoResponseException(
             'Unable to connect to $url. Check your network.');
       }
-      debugPrint('[ApiService] loginUser() - Exception: $e');
+      debugPrint('[ApiService] _loginUserNew() - Exception: $e');
       rethrow;
     }
   }
 
-  /// Adds a new fermentation entry to the server and saves it locally if it fails.
-  ///
-  /// Throws:
-  /// - [NoResponseException] on network/socket issues
-  /// - [Exception] for other server errors
-  Future<void> addFermentationEntry({
+  Future<void> _addFermentationEntryNew({
     required String token,
     required DateTime date,
     required double density,
@@ -114,13 +145,12 @@ class ApiService extends ChangeNotifier {
   }) async {
     final url = Uri.parse('$baseUrl/FermentationEntries');
     final body = {
-      'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-          .format(date), // "yyyy-MM-dd'T'HH:mm:ss.SSS"
+      'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(date),
       'density': density,
       'wineId': wineId,
     };
 
-    debugPrint('[ApiService] addFermentationEntry() - Starting request');
+    debugPrint('[ApiService] _addFermentationEntryNew() - Starting request');
     debugPrint('[ApiService]  -> URL: $url');
     debugPrint('[ApiService]  -> Request body: $body');
     debugPrint('[ApiService]  -> Token: Bearer $token');
@@ -141,22 +171,29 @@ class ApiService extends ChangeNotifier {
       debugPrint('[ApiService]  <- Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('[ApiService] addFermentationEntry() - Success');
+        debugPrint('[ApiService] _addFermentationEntryNew() - Success');
         await _saveToLocalHistory(body);
       } else {
-        debugPrint('[ApiService] Failed, saving locally');
+        debugPrint(
+            '[ApiService] _addFermentationEntryNew() - Failed, saving locally');
         await _databaseService.insertPendingEntry(body);
       }
     } catch (e) {
       if (e is SocketException || e is NoResponseException) {
-        debugPrint('[ApiService] Network error, saving locally');
+        debugPrint(
+            '[ApiService] _addFermentationEntryNew() - Network error, saving locally');
         await _databaseService.insertPendingEntry(body);
       } else {
-        debugPrint('[ApiService] Unexpected error: $e');
+        debugPrint(
+            '[ApiService] _addFermentationEntryNew() - Unexpected error: $e');
         rethrow; // Optionally, rethrow or handle differently
       }
     }
   }
+
+  // ==========================================================================
+  // Remaining Methods (Unchanged)
+  // ==========================================================================
 
   /// Synchronizes pending entries with the server.
   Future<void> syncPendingEntries(String token) async {
