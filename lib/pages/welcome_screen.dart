@@ -41,8 +41,8 @@ class WelcomeScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: 128,
-                        height: 128,
+                        width: 144,
+                        height: 144,
                         child: SvgPicture.asset(
                           'assets/logo.svg',
                           fit: BoxFit.contain,
@@ -83,7 +83,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                         onPressed: () {
-                          Navigator.pushNamed(context, '/register');
+                          Navigator.pushNamed(context, '/create_user');
                         },
                         child: const Text(
                           'Account Erstellen',

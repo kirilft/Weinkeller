@@ -65,6 +65,28 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _showFeatureNotAvailableDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Info'),
+          content: const SingleChildScrollView(
+            child: Text(
+                'dieses Feature ist derzeit noch nicht verfügbar. und kann ok drücken un das popup zu schliessen.'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -118,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(50.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,9 +160,7 @@ class _LoginPageState extends State<LoginPage> {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/password_reset');
-                },
+                onPressed: _showFeatureNotAvailableDialog,
                 icon: const Icon(Icons.link, size: 16),
                 label: const Text('Passwort vergessen?'),
               ),

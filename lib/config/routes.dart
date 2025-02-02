@@ -10,6 +10,7 @@ import '../pages/account.dart';
 import '../pages/history.dart';
 import '../pages/changelog.dart';
 import '../components/qr_result.dart';
+import '../pages/create_user.dart';
 
 class AppRoutes {
   static const String initialRoute = '/';
@@ -32,6 +33,7 @@ class AppRoutes {
         final args = ModalRoute.of(context)?.settings.arguments;
         return QRResultPage(qrCode: args is String ? args : '');
       },
+      '/create_user': (context) => const CreateUserPage(),
     };
   }
 }
