@@ -16,9 +16,10 @@ class WelcomeScreen extends StatelessWidget {
             padding: const EdgeInsets.only(right: 24),
             child: IconButton(
               // Remove explicit color so this icon adapts in dark/light modes
-              icon: const Icon(
+              icon: Icon(
                 FontAwesomeIcons.gear,
                 size: 32,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               onPressed: () {
                 Navigator.pushNamed(context, '/settings');
@@ -117,7 +118,7 @@ class WelcomeScreen extends StatelessWidget {
                           Navigator.pushNamed(context, '/login');
                         },
                         child: const Text(
-                          'einloggen',
+                          'Anmelden',
                           style: TextStyle(
                             color: Color(0xFF007AFF), // Keep blue text
                             fontFamily: "SF Pro",

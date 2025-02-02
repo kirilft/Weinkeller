@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// NEW: import flutter_secure_storage
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'config/routes.dart';
-import 'config/theme.dart';
+// 1. Import your AppColors
+import 'config/app_colors.dart';
+import 'config/theme.dart'; // If you still use your custom theme.dart
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 
@@ -17,8 +18,8 @@ Future<void> main() async {
     const secureStorage = FlutterSecureStorage();
 
     // Attempt to read baseUrl from secure storage; fallback to a default if none is found
-    final savedBaseUrl =
-        await secureStorage.read(key: 'baseUrl') ?? 'http://localhost:80/api';
+    final savedBaseUrl = await secureStorage.read(key: 'baseUrl') ??
+        'https://api.kasai.tech:80/api';
 
     // Create the ApiService with the base URL
     final apiService = ApiService(baseUrl: savedBaseUrl);
@@ -52,6 +53,7 @@ class MyWeinkellerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Access the current theme mode from ThemeProvider
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
@@ -59,6 +61,7 @@ class MyWeinkellerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: AppRoutes.initialRoute,
       routes: AppRoutes.routes,
+      // Use `_buildTheme` for light and dark, relying on themeMode
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeProvider.themeMode,
@@ -66,9 +69,31 @@ class MyWeinkellerApp extends StatelessWidget {
   }
 
   ThemeData _buildTheme(Brightness brightness) {
+    final isLight = brightness == Brightness.light;
+
     return ThemeData(
       brightness: brightness,
-      primarySwatch: Colors.blue,
+      primaryColor: isLight ? AppColors.blueLight : AppColors.blueDark,
+      scaffoldBackgroundColor:
+          isLight ? AppColors.gray6Light : AppColors.gray6Dark,
+
+      /// Updated `ColorScheme` without `background` or `onBackground`
+      colorScheme: ColorScheme(
+        brightness: brightness,
+        primary: isLight ? AppColors.blueLight : AppColors.blueDark,
+        onPrimary: isLight ? AppColors.whiteLight : AppColors.whiteDark,
+        secondary: isLight ? AppColors.greenLight : AppColors.greenDark,
+        onSecondary: isLight ? AppColors.whiteLight : AppColors.whiteDark,
+        error: isLight ? AppColors.redLight : AppColors.redDark,
+        onError: isLight ? AppColors.whiteLight : AppColors.whiteDark,
+
+        /// Use `surface` for what was previously `background`
+        surface: isLight ? AppColors.gray6Light : AppColors.gray6Dark,
+
+        /// Use `onSurface` for what was `onBackground`
+        onSurface: isLight ? AppColors.blackLight : AppColors.whiteDark,
+      ),
+
       fontFamily: 'SFProDisplay',
     );
   }

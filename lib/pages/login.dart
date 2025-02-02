@@ -92,14 +92,20 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+        title: const Text('Anmelden'),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 32),
+          child: IconButton(
+            icon: const Icon(
+              FontAwesomeIcons.arrowLeft,
+              size: 32,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 24),
+            padding: const EdgeInsets.only(right: 32),
             child: IconButton(
               icon: const Icon(
                 FontAwesomeIcons.gear,
@@ -120,12 +126,12 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(height: screenHeight * 0.2),
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'E-Mail'),
+              decoration: const InputDecoration(labelText: 'Email'),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(labelText: 'Passwort'),
               obscureText: true,
             ),
             const SizedBox(height: 10),
@@ -136,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                   Navigator.pushNamed(context, '/password_reset');
                 },
                 icon: const Icon(Icons.link, size: 16),
-                label: const Text('Forgot Password'),
+                label: const Text('Passwort vergessen?'),
               ),
             ),
             Align(
@@ -151,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
                     vertical: 15,
                   ),
                 ),
-                child: const Text('Login'),
+                child: const Text('Anmelden'),
               ),
             ),
           ],

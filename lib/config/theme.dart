@@ -25,5 +25,4 @@ class ThemeProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(themeModeKey, mode.index);
   }
-
 }
