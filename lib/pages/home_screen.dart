@@ -4,6 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:weinkeller/services/database_service.dart';
 import 'package:flutter/services.dart';
+import 'package:weinkeller/config/app_colors.dart';
+import 'package:weinkeller/config/custom_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,10 +62,14 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Manual Entry'),
+          title: const Text('Manual Entry',
+              style: TextStyle(fontFamily: 'SF Pro')),
           content: TextField(
             onChanged: (value) => enteredCode = value,
-            decoration: const InputDecoration(labelText: 'Enter WineID'),
+            decoration: const InputDecoration(
+              labelText: 'Enter WineID',
+              labelStyle: TextStyle(fontFamily: 'SF Pro'),
+            ),
             keyboardType: TextInputType.number,
             inputFormatters: <TextInputFormatter>[
               FilteringTextInputFormatter.digitsOnly,
@@ -72,18 +78,17 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child:
+                  const Text('Cancel', style: TextStyle(fontFamily: 'SF Pro')),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.pushNamed(
-                  context,
-                  '/qrResult',
-                  arguments: enteredCode,
-                );
+                Navigator.pushNamed(context, '/qrResult',
+                    arguments: enteredCode);
               },
-              child: const Text('OK'),
+              style: ElevatedButton.styleFrom(elevation: 0),
+              child: const Text('OK', style: TextStyle(fontFamily: 'SF Pro')),
             ),
           ],
         );
@@ -99,7 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -107,41 +113,58 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 0,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(width: 24), // Spacer to balance right-side icon
+            const SizedBox(width: 64), // Left spacer
             Text(
-              'Home Screen',
+              'Home',
               style: TextStyle(
-                color: isDarkMode ? Colors.white : Colors.black,
+                color: Theme.of(context).white,
+                fontFeatures: [
+                  FontFeature.disable('liga'),
+                  FontFeature.disable('clig')
+                ],
+                fontFamily: 'SF Pro',
+                fontSize: 28,
+                fontStyle: FontStyle.normal,
+                fontWeight: FontWeight.w400,
+                height: 34 / 28,
+                letterSpacing: 0.38,
               ),
             ),
-            if (_pendingChangesCount > 0)
-              Stack(
-                children: [
-                  const Icon(
-                    Icons.sync_problem,
-                    color: Colors.red,
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: CircleAvatar(
-                      radius: 8,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        '$_pendingChangesCount',
-                        style: const TextStyle(fontSize: 10, color: Colors.red),
-                      ),
+            _pendingChangesCount > 0
+                ? Container(
+                    padding: const EdgeInsets.only(right: 32),
+                    child: Stack(
+                      children: [
+                        Icon(
+                          FontAwesomeIcons.arrowsRotate,
+                          size: 32,
+                          color: theme.colorScheme.error,
+                        ),
+                        Positioned(
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 8,
+                            backgroundColor: theme.colorScheme.onError,
+                            child: Text(
+                              '$_pendingChangesCount',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.error,
+                                  fontFamily: 'SF Pro'),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              )
-            else
-              const SizedBox(width: 24),
+                  )
+                : const SizedBox(width: 64),
           ],
         ),
-        automaticallyImplyLeading: false,
       ),
       drawer: Drawer(
         child: ListView(
@@ -152,43 +175,38 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: EdgeInsets.zero,
                 padding: EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  color:
-                      isDarkMode ? Colors.grey[800] : const Color(0xFFFF453A),
+                  // Use a custom color: redDark in light mode, or a dark grey in dark mode
+                  color: isDarkMode ? Colors.grey[800] : AppColors.redDark,
                 ),
                 child: Center(
                   child: Text(
                     _randomGreeting,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black,
+                      color: theme.colorScheme.onSurface,
+                      fontFamily: 'SF Pro',
                       fontSize: 24,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
             ),
             ListTile(
-              leading: Icon(
-                Icons.settings,
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-              title: const Text('Settings'),
+              leading: Icon(Icons.settings, color: theme.colorScheme.onSurface),
+              title: const Text('Settings',
+                  style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/settings'),
             ),
             ListTile(
-              leading: Icon(
-                Icons.history,
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-              title: const Text('History'),
+              leading: Icon(Icons.history, color: theme.colorScheme.onSurface),
+              title:
+                  const Text('History', style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/history'),
             ),
             ListTile(
-              leading: Icon(
-                Icons.info,
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-              title: const Text('Changelog'),
+              leading: Icon(Icons.info, color: theme.colorScheme.onSurface),
+              title: const Text('Changelog',
+                  style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/changelog'),
             ),
           ],
@@ -198,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Background image
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
                 image: AssetImage('assets/background/weinkeller.jpg'),
                 fit: BoxFit.cover,
@@ -209,10 +227,11 @@ class _HomeScreenState extends State<HomeScreen> {
           if (isDarkMode)
             Container(
               color: Color.alphaBlend(
-                Colors.black.withAlpha(80), // 10% opacity (25/255)
+                Colors.black.withAlpha(80),
                 Colors.transparent,
               ),
             ),
+          // Error message overlay
           if (_errorMessage != null)
             Center(
               child: Padding(
@@ -220,27 +239,48 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isDarkMode
-                            ? Colors.redAccent
-                            : const Color(0xFFFF453A),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                     const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _showManualCodeDialog,
-                      child: const Text('Enter Code Manually'),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _showManualCodeDialog,
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0, // Removes button shadow
+                          backgroundColor: const Color(
+                              0xFFEFEFF0), // Custom light gray background
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 15,
+                            fontFamily: 'SF Pro',
+                            fontStyle: FontStyle.normal,
+                            fontWeight: FontWeight.w400,
+                            height: 1.333,
+                            letterSpacing: -0.23,
+                          ),
+                        ),
+                        child: Text(
+                          'Manuell Code eingeben',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontFamily: 'SF Pro',
+                            fontSize: 15,
+                            fontStyle: FontStyle.normal,
+                            fontWeight: FontWeight.w400,
+                            height: 1.333,
+                            letterSpacing: -0.23,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
             )
           else
+            // QRView if no error
             QRView(
               key: _qrKey,
               onQRViewCreated: (QRViewController controller) {
@@ -250,11 +290,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     setState(() {
                       _scannedCode = scanData.code;
                     });
-                    Navigator.pushNamed(
-                      context,
-                      '/qrResult',
-                      arguments: scanData.code,
-                    );
+                    Navigator.pushNamed(context, '/qrResult',
+                        arguments: scanData.code);
                   }
                 });
               },
@@ -266,6 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
             ),
+          // Bottom navigation bar
           Positioned(
             bottom: 0,
             left: 0,
@@ -274,16 +312,15 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 100,
               child: ClipRect(
                 child: Container(
-                  color: isDarkMode ? Colors.black87 : Colors.black,
+                  color: isDarkMode
+                      ? const Color(0xCC000000)
+                      : const Color(0xCC000000),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                        icon: const Icon(
-                          Icons.menu,
-                          size: 30,
-                          color: Colors.white,
-                        ),
+                        icon: const Icon(Icons.menu,
+                            size: 30, color: Colors.white),
                         onPressed: () =>
                             _scaffoldKey.currentState?.openDrawer(),
                         tooltip: 'Open Menu',
@@ -294,19 +331,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           shape: const CircleBorder(),
                           padding: const EdgeInsets.all(18),
                           backgroundColor: Colors.white,
+                          elevation: 0,
                         ),
                         child: const Icon(
-                          FontAwesomeIcons.qrcode, // Correct QR code icon
+                          FontAwesomeIcons.qrcode,
                           size: 40,
                           color: Colors.black,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.person,
-                          size: 30,
-                          color: Colors.white,
-                        ),
+                        icon: const Icon(Icons.person,
+                            size: 30, color: Colors.white),
                         onPressed: () =>
                             Navigator.pushNamed(context, '/account'),
                         tooltip: 'Open Account',

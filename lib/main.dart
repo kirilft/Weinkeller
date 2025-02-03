@@ -4,9 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'config/routes.dart';
-// 1. Import your AppColors
 import 'config/app_colors.dart';
-import 'config/theme.dart'; // If you still use your custom theme.dart
+import 'config/theme.dart'; // Your ThemeProvider
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 
@@ -30,15 +29,9 @@ Future<void> main() async {
     runApp(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ApiService>(
-            create: (_) => apiService,
-          ),
-          ChangeNotifierProvider<AuthService>(
-            create: (_) => authService,
-          ),
-          ChangeNotifierProvider<ThemeProvider>(
-            create: (_) => ThemeProvider(),
-          ),
+          ChangeNotifierProvider<ApiService>(create: (_) => apiService),
+          ChangeNotifierProvider<AuthService>(create: (_) => authService),
+          ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ],
         child: const MyWeinkellerApp(),
       ),
@@ -53,7 +46,6 @@ class MyWeinkellerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Access the current theme mode from ThemeProvider
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
@@ -61,7 +53,6 @@ class MyWeinkellerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: AppRoutes.initialRoute,
       routes: AppRoutes.routes,
-      // Use `_buildTheme` for light and dark, relying on themeMode
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeProvider.themeMode,
@@ -74,10 +65,9 @@ class MyWeinkellerApp extends StatelessWidget {
     return ThemeData(
       brightness: brightness,
       primaryColor: isLight ? AppColors.blueLight : AppColors.blueDark,
+      // New design: pure white for light mode and pure black for dark mode
       scaffoldBackgroundColor:
-          isLight ? AppColors.gray6Light : AppColors.gray6Dark,
-
-      /// Updated `ColorScheme` without `background` or `onBackground`
+          isLight ? AppColors.whiteLight : AppColors.blackDark,
       colorScheme: ColorScheme(
         brightness: brightness,
         primary: isLight ? AppColors.blueLight : AppColors.blueDark,
@@ -86,14 +76,10 @@ class MyWeinkellerApp extends StatelessWidget {
         onSecondary: isLight ? AppColors.whiteLight : AppColors.whiteDark,
         error: isLight ? AppColors.redLight : AppColors.redDark,
         onError: isLight ? AppColors.whiteLight : AppColors.whiteDark,
-
-        /// Use `surface` for what was previously `background`
-        surface: isLight ? AppColors.gray6Light : AppColors.gray6Dark,
-
-        /// Use `onSurface` for what was `onBackground`
+        // Using the new background for surface as well
+        surface: isLight ? AppColors.whiteLight : AppColors.blackDark,
         onSurface: isLight ? AppColors.blackLight : AppColors.whiteDark,
       ),
-
       fontFamily: 'SFProDisplay',
     );
   }
