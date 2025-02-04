@@ -25,8 +25,8 @@ class NoResponseException implements Exception {
 
 /// The main API service class.
 ///
-/// Handles user authentication, fermentation entries, QR data, and local history.
-/// Wrapped with [ChangeNotifier] to allow dynamic baseUrl changes.
+/// Handles user authentication, fermentation entries, QR data, local history,
+/// and wine name lookups. Wrapped with [ChangeNotifier] to allow dynamic baseUrl changes.
 class ApiService extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
 
@@ -54,8 +54,6 @@ class ApiService extends ChangeNotifier {
 
   /// Logs in a user and returns a token if successful.
   ///
-  /// This method wraps the new internal implementation.
-  ///
   /// Throws:
   /// - [WrongPasswordException] if status 401
   /// - [NoResponseException] on network/socket issues
@@ -65,8 +63,6 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Adds a new fermentation entry to the server and saves it locally if it fails.
-  ///
-  /// This method wraps the new internal implementation.
   ///
   /// Throws:
   /// - [NoResponseException] on network/socket issues
@@ -83,6 +79,90 @@ class ApiService extends ChangeNotifier {
       density: density,
       wineId: wineId,
     );
+  }
+
+  /// Retrieves all wines with their ids and names.
+  ///
+  /// Returns a list of maps, where each map contains the `id` and `name` keys.
+  ///
+  /// Throws:
+  /// - [NoResponseException] on network/socket issues
+  /// - [Exception] for other server errors
+  Future<List<Map<String, dynamic>>> getAllWineNames() async {
+    final url = Uri.parse('$baseUrl/Wines/Names');
+    debugPrint('[ApiService] getAllWineNames() - Starting request');
+    debugPrint('[ApiService]  -> URL: $url');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+      });
+
+      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
+      debugPrint('[ApiService]  <- Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        // Ensure the result is a list of maps with id and name.
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve wine names (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        debugPrint('[ApiService] getAllWineNames() - NoResponseException: $e');
+        throw NoResponseException(
+            'Unable to connect to $url. Check your network.');
+      }
+      debugPrint('[ApiService] getAllWineNames() - Exception: $e');
+      rethrow;
+    }
+  }
+
+  /// Retrieves the name of a wine using its [id].
+  ///
+  /// Returns the wine name as a [String].
+  ///
+  /// Throws:
+  /// - [NoResponseException] on network/socket issues
+  /// - [Exception] for other server errors
+  Future<String> getWineNameById(int id) async {
+    final url = Uri.parse('$baseUrl/Wines/$id/Name');
+    debugPrint('[ApiService] getWineNameById() - Starting request');
+    debugPrint('[ApiService]  -> URL: $url');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+      });
+
+      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
+      debugPrint('[ApiService]  <- Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        // Assuming the response body contains a JSON encoded string,
+        // if not, simply return response.body.
+        final data = jsonDecode(response.body);
+        if (data is String) {
+          return data;
+        } else {
+          // If the endpoint returns a plain string, fallback to this:
+          return response.body;
+        }
+      } else {
+        throw Exception(
+            'Failed to retrieve wine name (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException')) {
+        debugPrint('[ApiService] getWineNameById() - NoResponseException: $e');
+        throw NoResponseException(
+            'Unable to connect to $url. Check your network.');
+      }
+      debugPrint('[ApiService] getWineNameById() - Exception: $e');
+      rethrow;
+    }
   }
 
   // ==========================================================================
@@ -186,7 +266,7 @@ class ApiService extends ChangeNotifier {
       } else {
         debugPrint(
             '[ApiService] _addFermentationEntryNew() - Unexpected error: $e');
-        rethrow; // Optionally, rethrow or handle differently
+        rethrow;
       }
     }
   }
