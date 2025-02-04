@@ -11,12 +11,12 @@ class WelcomeScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final welcomeTitleStyle = TextStyle(
       color: theme.colorScheme.onSurface,
-      fontFamily: 'SF Pro',
-      fontSize: 28,
+      fontFamily: 'SFProDisplay',
+      fontSize: 34,
       fontStyle: FontStyle.normal,
       fontWeight: FontWeight.w400,
-      height: 34 / 28,
-      letterSpacing: 0.38,
+      height: 41 / 34,
+      letterSpacing: 0.4,
     );
 
     return Scaffold(
@@ -62,7 +62,7 @@ class WelcomeScreen extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       Text(
                         'Willkommen zur\nWeinkeller App',
                         textAlign: TextAlign.center,
@@ -89,14 +89,6 @@ class WelcomeScreen extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
-                          textStyle: const TextStyle(
-                            fontSize: 15,
-                            fontFamily: 'SF Pro',
-                            fontStyle: FontStyle.normal,
-                            fontWeight: FontWeight.w400,
-                            height: 1.333,
-                            letterSpacing: -0.23,
-                          ),
                         ),
                         onPressed: () {
                           Navigator.pushNamed(context, '/create_user');
@@ -105,12 +97,12 @@ class WelcomeScreen extends StatelessWidget {
                           'Account Erstellen',
                           style: TextStyle(
                             color: theme.colorScheme.onPrimary,
-                            fontFamily: 'SF Pro',
-                            fontSize: 15,
+                            fontFamily: 'SFProDisplay',
+                            fontSize: 20,
                             fontStyle: FontStyle.normal,
                             fontWeight: FontWeight.w400,
-                            height: 1.333,
-                            letterSpacing: -0.23,
+                            height: 1.25,
+                            letterSpacing: -0.45,
                           ),
                         ),
                       ),
@@ -128,14 +120,6 @@ class WelcomeScreen extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
-                          textStyle: const TextStyle(
-                            fontSize: 15,
-                            fontFamily: 'SF Pro',
-                            fontStyle: FontStyle.normal,
-                            fontWeight: FontWeight.w400,
-                            height: 1.333,
-                            letterSpacing: -0.23,
-                          ),
                         ),
                         onPressed: () {
                           Navigator.pushNamed(context, '/login');
@@ -144,12 +128,12 @@ class WelcomeScreen extends StatelessWidget {
                           'Anmelden',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
-                            fontFamily: 'SF Pro',
-                            fontSize: 15,
+                            fontFamily: 'SFProDisplay',
+                            fontSize: 20,
                             fontStyle: FontStyle.normal,
                             fontWeight: FontWeight.w400,
-                            height: 1.333,
-                            letterSpacing: -0.23,
+                            height: 1.25,
+                            letterSpacing: -0.45,
                           ),
                         ),
                       ),
