@@ -105,7 +105,6 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Changes the user password.
-  /// TODO: Implement the actual API call logic.
   Future<void> changePassword({
     required String token,
     required String oldPassword,
@@ -228,12 +227,18 @@ class ApiService extends ChangeNotifier {
   // ==========================================================================
 
   /// Retrieves an additive by [id].
-  Future<Map<String, dynamic>> getAdditive(int id) async {
+  Future<Map<String, dynamic>> getAdditive(int id,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives/$id');
     debugPrint('[ApiService] getAdditive() - URL: $url');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getAdditive() - Response code: ${response.statusCode}');
       debugPrint(
@@ -254,14 +259,19 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Updates an additive with [id] using [additive] data.
-  Future<void> updateAdditive(int id, Map<String, dynamic> additive) async {
+  Future<void> updateAdditive(int id, Map<String, dynamic> additive,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives/$id');
     debugPrint('[ApiService] updateAdditive() - URL: $url');
     debugPrint('[ApiService] updateAdditive() - Request body: $additive');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(additive),
       );
       debugPrint(
@@ -281,12 +291,15 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Deletes an additive with the given [id].
-  Future<void> deleteAdditive(int id) async {
+  Future<void> deleteAdditive(int id, {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives/$id');
     debugPrint('[ApiService] deleteAdditive() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.delete(url, headers: headers);
       debugPrint(
           '[ApiService] deleteAdditive() - Response code: ${response.statusCode}');
       debugPrint(
@@ -304,15 +317,19 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Creates a new additive.
-  Future<Map<String, dynamic>> createAdditive(
-      Map<String, dynamic> additive) async {
+  Future<Map<String, dynamic>> createAdditive(Map<String, dynamic> additive,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives');
     debugPrint('[ApiService] createAdditive() - URL: $url');
     debugPrint('[ApiService] createAdditive() - Request body: $additive');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(additive),
       );
       debugPrint(
@@ -351,12 +368,16 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Retrieves a fermentation entry by [id].
-  Future<Map<String, dynamic>> getFermentationEntry(int id) async {
+  Future<Map<String, dynamic>> getFermentationEntry(int id,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] getFermentationEntry() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getFermentationEntry() - Response code: ${response.statusCode}');
       debugPrint(
@@ -377,15 +398,19 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Updates a fermentation entry with [id] using [entry] data.
-  Future<void> updateFermentationEntry(
-      int id, Map<String, dynamic> entry) async {
+  Future<void> updateFermentationEntry(int id, Map<String, dynamic> entry,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] updateFermentationEntry() - URL: $url');
     debugPrint('[ApiService] updateFermentationEntry() - Request body: $entry');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(entry),
       );
       debugPrint(
@@ -406,12 +431,15 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Deletes a fermentation entry with [id].
-  Future<void> deleteFermentationEntry(int id) async {
+  Future<void> deleteFermentationEntry(int id, {required String token}) async {
     final url = Uri.parse('$baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] deleteFermentationEntry() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.delete(url, headers: headers);
       debugPrint(
           '[ApiService] deleteFermentationEntry() - Response code: ${response.statusCode}');
       debugPrint(
@@ -483,12 +511,16 @@ class ApiService extends ChangeNotifier {
   // ==========================================================================
 
   /// Retrieves all wine names.
-  Future<List<Map<String, dynamic>>> getAllWineNames() async {
-    final url = Uri.parse('$baseUrl/Wines/Names');
+  Future<List<Map<String, dynamic>>> getAllWineNames(
+      {required String token}) async {
+    final url = Uri.parse('$baseUrl/Wines');
     debugPrint('[ApiService] getAllWineNames() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getAllWineNames() - Response code: ${response.statusCode}');
       debugPrint(
@@ -514,10 +546,8 @@ class ApiService extends ChangeNotifier {
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] getWineById() - URL: $url');
-
-    // Use Accept header (matching your curl) and include the Authorization header.
-    final headers = <String, String>{
-      'accept': 'text/plain', // using text/plain as in your curl command
+    final headers = {
+      'Accept': 'text/plain',
       'Authorization': 'Bearer $token',
     };
 
@@ -544,14 +574,19 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Creates a new wine.
-  Future<Map<String, dynamic>> createWine(Map<String, dynamic> wine) async {
+  Future<Map<String, dynamic>> createWine(Map<String, dynamic> wine,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines');
     debugPrint('[ApiService] createWine() - URL: $url');
     debugPrint('[ApiService] createWine() - Request body: $wine');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(wine),
       );
       debugPrint(
@@ -572,14 +607,19 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Updates an existing wine with [id] using [wine] data.
-  Future<void> updateWine(int id, Map<String, dynamic> wine) async {
+  Future<void> updateWine(int id, Map<String, dynamic> wine,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] updateWine() - URL: $url');
     debugPrint('[ApiService] updateWine() - Request body: $wine');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(wine),
       );
       debugPrint(
@@ -598,12 +638,15 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Deletes a wine with the given [id].
-  Future<void> deleteWine(int id) async {
+  Future<void> deleteWine(int id, {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] deleteWine() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.delete(url, headers: headers);
       debugPrint(
           '[ApiService] deleteWine() - Response code: ${response.statusCode}');
       debugPrint('[ApiService] deleteWine() - Response body: ${response.body}');
@@ -620,12 +663,16 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Retrieves additives for a given wine [wineId].
-  Future<List<Map<String, dynamic>>> getWineAdditives(int wineId) async {
+  Future<List<Map<String, dynamic>>> getWineAdditives(int wineId,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/Additives');
     debugPrint('[ApiService] getWineAdditives() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getWineAdditives() - Response code: ${response.statusCode}');
       debugPrint(
@@ -647,13 +694,16 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Retrieves fermentation entries for a given wine [wineId].
-  Future<List<Map<String, dynamic>>> getWineFermentationEntries(
-      int wineId) async {
+  Future<List<Map<String, dynamic>>> getWineFermentationEntries(int wineId,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/FermentationEntries');
     debugPrint('[ApiService] getWineFermentationEntries() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getWineFermentationEntries() - Response code: ${response.statusCode}');
       debugPrint(
@@ -675,12 +725,16 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Retrieves the MostTreatment data for a given wine [wineId].
-  Future<Map<String, dynamic>> getMostTreatment(int wineId) async {
+  Future<Map<String, dynamic>> getMostTreatment(int wineId,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] getMostTreatment() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getMostTreatment() - Response code: ${response.statusCode}');
       debugPrint(
@@ -702,15 +756,20 @@ class ApiService extends ChangeNotifier {
 
   /// Updates the MostTreatment data for a given wine [wineId] using [treatmentData].
   Future<void> updateMostTreatment(
-      int wineId, Map<String, dynamic> treatmentData) async {
+      int wineId, Map<String, dynamic> treatmentData,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] updateMostTreatment() - URL: $url');
     debugPrint(
         '[ApiService] updateMostTreatment() - Request body: $treatmentData');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(treatmentData),
       );
       debugPrint(
@@ -732,15 +791,20 @@ class ApiService extends ChangeNotifier {
 
   /// Creates a new MostTreatment entry for a given wine [wineId] using [treatmentData].
   Future<Map<String, dynamic>> createMostTreatment(
-      int wineId, Map<String, dynamic> treatmentData) async {
+      int wineId, Map<String, dynamic> treatmentData,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] createMostTreatment() - URL: $url');
     debugPrint(
         '[ApiService] createMostTreatment() - Request body: $treatmentData');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(treatmentData),
       );
       debugPrint(
@@ -763,12 +827,15 @@ class ApiService extends ChangeNotifier {
   }
 
   /// Deletes the MostTreatment data for a given wine [wineId].
-  Future<void> deleteMostTreatment(int wineId) async {
+  Future<void> deleteMostTreatment(int wineId, {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] deleteMostTreatment() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.delete(url, headers: headers);
       debugPrint(
           '[ApiService] deleteMostTreatment() - Response code: ${response.statusCode}');
       debugPrint(

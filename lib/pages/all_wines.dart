@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import 'package:weinkeller/services/auth_service.dart';
 
 class AllWinesPage extends StatelessWidget {
   const AllWinesPage({Key? key}) : super(key: key);
 
   Future<List<Map<String, dynamic>>> _fetchWines(BuildContext context) async {
     final apiService = Provider.of<ApiService>(context, listen: false);
-    return await apiService.getAllWineNames();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.authToken;
+
+    // If the token is null or empty, return an empty list (or handle accordingly)
+    if (token == null || token.isEmpty) {
+      return [];
+    }
+
+    return await apiService.getAllWineNames(token: token);
   }
 
   @override
