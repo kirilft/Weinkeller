@@ -111,10 +111,22 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Anmelden'),
+        title: Text(
+          'Anmelden',
+          style: TextStyle(
+            color: theme.colorScheme.onSurface,
+            fontFamily: 'SFProDisplay',
+            fontSize: 28,
+            fontStyle: FontStyle.normal,
+            fontWeight: FontWeight.w400,
+            height: 34 / 28,
+            letterSpacing: -0.38,
+          ),
+        ),
         leading: Padding(
           padding: const EdgeInsets.only(left: 32),
           child: IconButton(
@@ -162,7 +174,18 @@ class _LoginPageState extends State<LoginPage> {
               child: TextButton.icon(
                 onPressed: _showFeatureNotAvailableDialog,
                 icon: const Icon(Icons.link, size: 16),
-                label: const Text('Passwort vergessen?'),
+                label: Text(
+                  'Passwort vergessen?',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontFamily: 'SFProDisplay',
+                    fontSize: 13,
+                    fontStyle: FontStyle.normal,
+                    fontWeight: FontWeight.w400,
+                    height: 18 / 13,
+                    letterSpacing: -0.08,
+                  ),
+                ),
               ),
             ),
             Align(
@@ -177,7 +200,18 @@ class _LoginPageState extends State<LoginPage> {
                     vertical: 15,
                   ),
                 ),
-                child: const Text('Anmelden'),
+                child: Text(
+                  'Anmelden',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'SFProDisplay',
+                    fontSize: 15,
+                    fontStyle: FontStyle.normal,
+                    fontWeight: FontWeight.w400,
+                    height: 20 / 15,
+                    letterSpacing: -0.23,
+                  ),
+                ),
               ),
             ),
           ],

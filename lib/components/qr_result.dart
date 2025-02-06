@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:weinkeller/services/auth_service.dart';
@@ -17,6 +18,39 @@ class QRResultPage extends StatefulWidget {
 class _QRResultPageState extends State<QRResultPage> {
   final TextEditingController _densityController = TextEditingController();
   bool _isSubmitting = false;
+  String _wineName = ''; // This will store the fetched wine name
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWineName();
+  }
+
+  Future<void> _fetchWineName() async {
+    try {
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final authService = Provider.of<AuthService>(context, listen: false);
+      // Parse the QR code as wineId
+      final wineId = int.parse(widget.qrCode);
+      // Retrieve the token; if null, we cannot fetch the wine name
+      final token = authService.authToken;
+      if (token == null || token.isEmpty) {
+        setState(() {
+          _wineName = 'Unknown Wine';
+        });
+        return;
+      }
+      final result = await apiService.getWineById(wineId, token: token);
+      setState(() {
+        _wineName = result['name'] ?? 'Unknown Wine';
+      });
+    } catch (e) {
+      setState(() {
+        _wineName = 'Unknown Wine';
+      });
+      debugPrint('[QRResultPage] _fetchWineName() - Error: $e');
+    }
+  }
 
   /// Submits the QR code and additional data (density) to the server.
   Future<void> _submitData() async {
@@ -89,9 +123,7 @@ class _QRResultPageState extends State<QRResultPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
-          content: SingleChildScrollView(
-            child: Text(message),
-          ),
+          content: SingleChildScrollView(child: Text(message)),
           actions: [
             if (showLoginButton)
               TextButton(
@@ -135,45 +167,76 @@ class _QRResultPageState extends State<QRResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Set the system overlay style so that iOS status bar icons are dark.
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QR Code Details'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Wein',
+          style: TextStyle(fontFamily: 'SF Pro'),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Scanned QR Code:',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.qrCode,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _densityController,
-              decoration: const InputDecoration(
-                labelText: 'Density',
-                hintText: 'Enter the density value (e.g., 0.98)',
-                border: OutlineInputBorder(),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 96),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // "Scanned QR Code:" with the code appended.
+              Text(
+                'Scanned QR Code: ${widget.qrCode}',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 24),
-            _isSubmitting
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _submitData,
-                    child: const Text('Submit'),
-                  ),
-          ],
+              const SizedBox(height: 24),
+              // Headline: use the fetched wine name (if available), aligned left.
+              Text(
+                _wineName.isEmpty ? 'Loading...' : _wineName,
+                style: const TextStyle(
+                  color: Color(0xFF000000), // var(--luminance-black, #000)
+                  fontFamily: 'SF Pro',
+                  fontSize: 20,
+                  fontStyle: FontStyle.normal,
+                  fontWeight: FontWeight.w400,
+                  height: 1.25, // 25/20
+                  letterSpacing: -0.45,
+                  fontFeatures: [
+                    FontFeature.disable('liga'),
+                    FontFeature.disable('clig'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Density input field.
+              TextField(
+                controller: _densityController,
+                decoration: const InputDecoration(
+                  labelText: 'Density',
+                  hintText: 'Enter the density value (e.g., 0.98)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 24),
+              // Submit button aligned to the right.
+              _isSubmitting
+                  ? const Center(child: CircularProgressIndicator())
+                  : Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: _submitData,
+                        child: const Text('Submit'),
+                      ),
+                    ),
+            ],
+          ),
         ),
       ),
     );

@@ -6,7 +6,7 @@ import 'package:weinkeller/services/database_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart'; // for ChangeNotifier, debugPrint, etc.
 
-/// Custom exceptions in case the server responds with specific errors.
+/// Custom exceptions for server errors.
 class WrongPasswordException implements Exception {
   final String message;
   WrongPasswordException(this.message);
@@ -25,19 +25,20 @@ class NoResponseException implements Exception {
 
 /// The main API service class.
 ///
-/// Handles user authentication, fermentation entries, QR data, local history,
-/// and wine name lookups. Wrapped with [ChangeNotifier] to allow dynamic baseUrl changes.
+/// This class integrates all endpoints as defined in the OpenAPI spec.
+/// It handles Additives, FermentationEntries, Users (login, register, changePassword, deleteAccount),
+/// and Wines (and associated MostTreatment).
 class ApiService extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
 
-  // We store the base URL in a variable so it can be updated at runtime if needed.
+  // Base URL which can be updated dynamically.
   String _baseUrl;
   String get baseUrl => _baseUrl;
   set baseUrl(String newUrl) {
     if (newUrl.isEmpty) {
       debugPrint(
           '[ApiService] WARNING: Provided baseUrl is empty, using fallback');
-      _baseUrl = 'http://localhost:80/api'; // Or some fallback
+      _baseUrl = 'http://localhost:80/api';
     } else {
       _baseUrl = newUrl;
     }
@@ -49,132 +50,145 @@ class ApiService extends ChangeNotifier {
   ApiService({required String baseUrl}) : _baseUrl = baseUrl;
 
   // ==========================================================================
-  // Public Wrapper Methods (Original API Interface)
+  // ========== USERS ==========
   // ==========================================================================
 
   /// Logs in a user and returns a token if successful.
-  ///
-  /// Throws:
-  /// - [WrongPasswordException] if status 401
-  /// - [NoResponseException] on network/socket issues
-  /// - [Exception] for other server errors
+  /// Throws [WrongPasswordException], [NoResponseException], or general [Exception].
   Future<String> loginUser(String email, String password) async {
+    debugPrint('[ApiService] loginUser() called with email: $email');
     return await _loginUserNew(email, password);
   }
 
-  /// Adds a new fermentation entry to the server and saves it locally if it fails.
-  ///
-  /// Throws:
-  /// - [NoResponseException] on network/socket issues
-  /// - [Exception] for other server errors
-  Future<void> addFermentationEntry({
-    required String token,
-    required DateTime date,
-    required double density,
-    required int wineId,
+  /// Registers a new user.
+  /// Returns the parsed user data on success.
+  Future<Map<String, dynamic>> registerUser({
+    required String username,
+    required String email,
+    required String password,
   }) async {
-    await _addFermentationEntryNew(
-      token: token,
-      date: date,
-      density: density,
-      wineId: wineId,
-    );
-  }
+    final url = Uri.parse('$baseUrl/Users/Register');
+    final body = {
+      'username': username,
+      'email': email,
+      'password': password,
+    };
 
-  /// Retrieves all wines with their ids and names.
-  ///
-  /// Returns a list of maps, where each map contains the `id` and `name` keys.
-  ///
-  /// Throws:
-  /// - [NoResponseException] on network/socket issues
-  /// - [Exception] for other server errors
-  Future<List<Map<String, dynamic>>> getAllWineNames() async {
-    final url = Uri.parse('$baseUrl/Wines/Names');
-    debugPrint('[ApiService] getAllWineNames() - Starting request');
-    debugPrint('[ApiService]  -> URL: $url');
+    debugPrint('[ApiService] registerUser() - URL: $url');
+    debugPrint('[ApiService] registerUser() - Request body: $body');
 
     try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-      });
-
-      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
-      debugPrint('[ApiService]  <- Response body: ${response.body}');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      debugPrint(
+          '[ApiService] registerUser() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] registerUser() - Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        // Ensure the result is a list of maps with id and name.
-        return data.map((item) => item as Map<String, dynamic>).toList();
+        return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
-            'Failed to retrieve wine names (status ${response.statusCode}): ${response.body}');
+            'Failed to register user (status ${response.statusCode}): ${response.body}');
       }
     } catch (e) {
+      debugPrint('[ApiService] registerUser() - Error: $e');
       if (e.toString().contains('SocketException')) {
-        debugPrint('[ApiService] getAllWineNames() - NoResponseException: $e');
         throw NoResponseException(
             'Unable to connect to $url. Check your network.');
       }
-      debugPrint('[ApiService] getAllWineNames() - Exception: $e');
       rethrow;
     }
   }
 
-  /// Retrieves the name of a wine using its [id].
-  ///
-  /// Returns the wine name as a [String].
-  ///
-  /// Throws:
-  /// - [NoResponseException] on network/socket issues
-  /// - [Exception] for other server errors
-  Future<String> getWineNameById(int id) async {
-    final url = Uri.parse('$baseUrl/Wines/$id/Name');
-    debugPrint('[ApiService] getWineNameById() - Starting request');
-    debugPrint('[ApiService]  -> URL: $url');
+  /// Changes the user password.
+  /// TODO: Implement the actual API call logic.
+  Future<void> changePassword({
+    required String token,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/Users/Password');
+    final body = {
+      'oldPassword': oldPassword,
+      'newPassword': newPassword,
+    };
+
+    debugPrint('[ApiService] changePassword() - URL: $url');
+    debugPrint('[ApiService] changePassword() - Request body: $body');
+    debugPrint('[ApiService] changePassword() - Token: Bearer $token');
 
     try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-      });
-
-      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
-      debugPrint('[ApiService]  <- Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        // Assuming the response body contains a JSON encoded string,
-        // if not, simply return response.body.
-        final data = jsonDecode(response.body);
-        if (data is String) {
-          return data;
-        } else {
-          // If the endpoint returns a plain string, fallback to this:
-          return response.body;
-        }
-      } else {
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+      debugPrint(
+          '[ApiService] changePassword() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] changePassword() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
         throw Exception(
-            'Failed to retrieve wine name (status ${response.statusCode}): ${response.body}');
+            'Failed to change password (status ${response.statusCode}): ${response.body}');
       }
     } catch (e) {
+      debugPrint('[ApiService] changePassword() - Error: $e');
       if (e.toString().contains('SocketException')) {
-        debugPrint('[ApiService] getWineNameById() - NoResponseException: $e');
         throw NoResponseException(
             'Unable to connect to $url. Check your network.');
       }
-      debugPrint('[ApiService] getWineNameById() - Exception: $e');
+      rethrow;
+    }
+  }
+
+  /// Deletes the user's account.
+  Future<void> deleteAccount({required String token}) async {
+    final url = Uri.parse('$baseUrl/Users');
+    debugPrint('[ApiService] deleteAccount() - URL: $url');
+    debugPrint('[ApiService] deleteAccount() - Token: Bearer $token');
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      debugPrint(
+          '[ApiService] deleteAccount() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteAccount() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to delete account (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteAccount() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException(
+            'Unable to connect to $url. Check your network.');
+      }
       rethrow;
     }
   }
 
   // ==========================================================================
-  // New Internal Implementations (Adapted to New Endpoints/DTOs)
+  // ========== LOGIN INTERNAL ==========
   // ==========================================================================
 
   Future<String> _loginUserNew(String email, String password) async {
     final url = Uri.parse('$baseUrl/Users/Login');
-    debugPrint('[ApiService] _loginUserNew() - Starting request');
-    debugPrint('[ApiService]  -> URL: $url');
+    debugPrint('[ApiService] _loginUserNew() - URL: $url');
     debugPrint(
-        '[ApiService]  -> Sending JSON: {"email": "$email", "password": "******"}');
+        '[ApiService] _loginUserNew() - Sending credentials for email: $email');
 
     try {
       final response = await http.post(
@@ -182,41 +196,240 @@ class ApiService extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
-
-      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
-      debugPrint('[ApiService]  <- Response body: ${response.body}');
-
+      debugPrint(
+          '[ApiService] _loginUserNew() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] _loginUserNew() - Response body: ${response.body}');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
         if (token == null || token.toString().isEmpty) {
-          debugPrint('[ApiService] _loginUserNew() - No token in response!');
-          throw Exception('Login failed: No token returned by the server.');
+          throw Exception('Login failed: No token returned.');
         }
-        debugPrint('[ApiService] _loginUserNew() - Success, got token');
         return token.toString();
       } else if (response.statusCode == 401) {
-        debugPrint(
-            '[ApiService] _loginUserNew() - WrongPasswordException thrown');
         throw WrongPasswordException('Incorrect email or password.');
       } else {
-        debugPrint(
-            '[ApiService] _loginUserNew() - Unexpected status: ${response.statusCode}');
         throw Exception(
-          'Login failed (status ${response.statusCode}):\n${response.body}',
-        );
+            'Login failed (status ${response.statusCode}): ${response.body}');
       }
     } catch (e) {
+      debugPrint('[ApiService] _loginUserNew() - Error: $e');
       if (e.toString().contains('SocketException')) {
-        debugPrint('[ApiService] _loginUserNew() - NoResponseException: $e');
         throw NoResponseException(
             'Unable to connect to $url. Check your network.');
       }
-      debugPrint('[ApiService] _loginUserNew() - Exception: $e');
       rethrow;
     }
   }
 
+  // ==========================================================================
+  // ========== ADDITIVES ==========
+  // ==========================================================================
+
+  /// Retrieves an additive by [id].
+  Future<Map<String, dynamic>> getAdditive(int id) async {
+    final url = Uri.parse('$baseUrl/Additives/$id');
+    debugPrint('[ApiService] getAdditive() - URL: $url');
+    try {
+      final response =
+          await http.get(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] getAdditive() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getAdditive() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve additive (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getAdditive() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Updates an additive with [id] using [additive] data.
+  Future<void> updateAdditive(int id, Map<String, dynamic> additive) async {
+    final url = Uri.parse('$baseUrl/Additives/$id');
+    debugPrint('[ApiService] updateAdditive() - URL: $url');
+    debugPrint('[ApiService] updateAdditive() - Request body: $additive');
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(additive),
+      );
+      debugPrint(
+          '[ApiService] updateAdditive() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateAdditive() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update additive: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateAdditive() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Deletes an additive with the given [id].
+  Future<void> deleteAdditive(int id) async {
+    final url = Uri.parse('$baseUrl/Additives/$id');
+    debugPrint('[ApiService] deleteAdditive() - URL: $url');
+    try {
+      final response =
+          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] deleteAdditive() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteAdditive() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete additive: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteAdditive() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Creates a new additive.
+  Future<Map<String, dynamic>> createAdditive(
+      Map<String, dynamic> additive) async {
+    final url = Uri.parse('$baseUrl/Additives');
+    debugPrint('[ApiService] createAdditive() - URL: $url');
+    debugPrint('[ApiService] createAdditive() - Request body: $additive');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(additive),
+      );
+      debugPrint(
+          '[ApiService] createAdditive() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] createAdditive() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to create additive (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createAdditive() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  // ==========================================================================
+  // ========== FERMENTATION ENTRIES ==========
+  // ==========================================================================
+
+  /// Adds a fermentation entry.
+  Future<void> addFermentationEntry({
+    required String token,
+    required DateTime date,
+    required double density,
+    required int wineId,
+  }) async {
+    debugPrint('[ApiService] addFermentationEntry() called');
+    await _addFermentationEntryNew(
+        token: token, date: date, density: density, wineId: wineId);
+  }
+
+  /// Retrieves a fermentation entry by [id].
+  Future<Map<String, dynamic>> getFermentationEntry(int id) async {
+    final url = Uri.parse('$baseUrl/FermentationEntries/$id');
+    debugPrint('[ApiService] getFermentationEntry() - URL: $url');
+    try {
+      final response =
+          await http.get(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] getFermentationEntry() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getFermentationEntry() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve fermentation entry: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getFermentationEntry() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Updates a fermentation entry with [id] using [entry] data.
+  Future<void> updateFermentationEntry(
+      int id, Map<String, dynamic> entry) async {
+    final url = Uri.parse('$baseUrl/FermentationEntries/$id');
+    debugPrint('[ApiService] updateFermentationEntry() - URL: $url');
+    debugPrint('[ApiService] updateFermentationEntry() - Request body: $entry');
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(entry),
+      );
+      debugPrint(
+          '[ApiService] updateFermentationEntry() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateFermentationEntry() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to update fermentation entry: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateFermentationEntry() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Deletes a fermentation entry with [id].
+  Future<void> deleteFermentationEntry(int id) async {
+    final url = Uri.parse('$baseUrl/FermentationEntries/$id');
+    debugPrint('[ApiService] deleteFermentationEntry() - URL: $url');
+    try {
+      final response =
+          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] deleteFermentationEntry() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteFermentationEntry() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to delete fermentation entry: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteFermentationEntry() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Internal method to add a fermentation entry.
   Future<void> _addFermentationEntryNew({
     required String token,
     required DateTime date,
@@ -230,10 +443,10 @@ class ApiService extends ChangeNotifier {
       'wineId': wineId,
     };
 
-    debugPrint('[ApiService] _addFermentationEntryNew() - Starting request');
-    debugPrint('[ApiService]  -> URL: $url');
-    debugPrint('[ApiService]  -> Request body: $body');
-    debugPrint('[ApiService]  -> Token: Bearer $token');
+    debugPrint('[ApiService] _addFermentationEntryNew() - URL: $url');
+    debugPrint('[ApiService] _addFermentationEntryNew() - Body: $body');
+    debugPrint(
+        '[ApiService] _addFermentationEntryNew() - Token: Bearer $token');
 
     try {
       final response = await http
@@ -246,75 +459,351 @@ class ApiService extends ChangeNotifier {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
-
-      debugPrint('[ApiService]  <- Response code: ${response.statusCode}');
-      debugPrint('[ApiService]  <- Response body: ${response.body}');
-
+      debugPrint(
+          '[ApiService] _addFermentationEntryNew() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] _addFermentationEntryNew() - Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('[ApiService] _addFermentationEntryNew() - Success');
         await _saveToLocalHistory(body);
       } else {
-        debugPrint(
-            '[ApiService] _addFermentationEntryNew() - Failed, saving locally');
         await _databaseService.insertPendingEntry(body);
       }
     } catch (e) {
+      debugPrint('[ApiService] _addFermentationEntryNew() - Error: $e');
       if (e is SocketException || e is NoResponseException) {
-        debugPrint(
-            '[ApiService] _addFermentationEntryNew() - Network error, saving locally');
         await _databaseService.insertPendingEntry(body);
       } else {
-        debugPrint(
-            '[ApiService] _addFermentationEntryNew() - Unexpected error: $e');
         rethrow;
       }
     }
   }
 
   // ==========================================================================
-  // Remaining Methods (Unchanged)
+  // ========== WINES ==========
   // ==========================================================================
 
-  /// Synchronizes pending entries with the server.
-  Future<void> syncPendingEntries(String token) async {
-    debugPrint('[ApiService] syncPendingEntries() - Starting synchronization');
-    final pendingEntries = await _databaseService.getPendingEntries();
-    for (final entry in pendingEntries) {
-      try {
-        await addFermentationEntry(
-          token: token,
-          date: DateTime.parse(entry['date']),
-          density: entry['density'],
-          wineId: entry['wineId'],
-        );
-        await _databaseService.clearPendingEntry(entry['id']);
-      } catch (e) {
-        debugPrint(
-            '[ApiService] syncPendingEntries() - Error syncing entry: $e');
+  /// Retrieves all wine names.
+  Future<List<Map<String, dynamic>>> getAllWineNames() async {
+    final url = Uri.parse('$baseUrl/Wines/Names');
+    debugPrint('[ApiService] getAllWineNames() - URL: $url');
+    try {
+      final response =
+          await http.get(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] getAllWineNames() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getAllWineNames() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve wine names (status ${response.statusCode}): ${response.body}');
       }
+    } catch (e) {
+      debugPrint('[ApiService] getAllWineNames() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
     }
-    debugPrint('[ApiService] syncPendingEntries() - Completed synchronization');
   }
 
-  /// Saves a fermentation entry to a local file for history tracking.
+  /// Retrieves a wine by [id].
+  Future<Map<String, dynamic>> getWineById(int id,
+      {required String token}) async {
+    final url = Uri.parse('$baseUrl/Wines/$id');
+    debugPrint('[ApiService] getWineById() - URL: $url');
+
+    // Use Accept header (matching your curl) and include the Authorization header.
+    final headers = <String, String>{
+      'accept': 'text/plain', // using text/plain as in your curl command
+      'Authorization': 'Bearer $token',
+    };
+
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getWineById() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineById() - Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve wine (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineById() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Creates a new wine.
+  Future<Map<String, dynamic>> createWine(Map<String, dynamic> wine) async {
+    final url = Uri.parse('$baseUrl/Wines');
+    debugPrint('[ApiService] createWine() - URL: $url');
+    debugPrint('[ApiService] createWine() - Request body: $wine');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(wine),
+      );
+      debugPrint(
+          '[ApiService] createWine() - Response code: ${response.statusCode}');
+      debugPrint('[ApiService] createWine() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to create wine: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createWine() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Updates an existing wine with [id] using [wine] data.
+  Future<void> updateWine(int id, Map<String, dynamic> wine) async {
+    final url = Uri.parse('$baseUrl/Wines/$id');
+    debugPrint('[ApiService] updateWine() - URL: $url');
+    debugPrint('[ApiService] updateWine() - Request body: $wine');
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(wine),
+      );
+      debugPrint(
+          '[ApiService] updateWine() - Response code: ${response.statusCode}');
+      debugPrint('[ApiService] updateWine() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update wine: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateWine() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Deletes a wine with the given [id].
+  Future<void> deleteWine(int id) async {
+    final url = Uri.parse('$baseUrl/Wines/$id');
+    debugPrint('[ApiService] deleteWine() - URL: $url');
+    try {
+      final response =
+          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] deleteWine() - Response code: ${response.statusCode}');
+      debugPrint('[ApiService] deleteWine() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete wine: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteWine() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieves additives for a given wine [wineId].
+  Future<List<Map<String, dynamic>>> getWineAdditives(int wineId) async {
+    final url = Uri.parse('$baseUrl/Wines/$wineId/Additives');
+    debugPrint('[ApiService] getWineAdditives() - URL: $url');
+    try {
+      final response =
+          await http.get(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] getWineAdditives() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineAdditives() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve additives for wine $wineId: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineAdditives() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieves fermentation entries for a given wine [wineId].
+  Future<List<Map<String, dynamic>>> getWineFermentationEntries(
+      int wineId) async {
+    final url = Uri.parse('$baseUrl/Wines/$wineId/FermentationEntries');
+    debugPrint('[ApiService] getWineFermentationEntries() - URL: $url');
+    try {
+      final response =
+          await http.get(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] getWineFermentationEntries() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineFermentationEntries() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve fermentation entries for wine $wineId: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineFermentationEntries() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieves the MostTreatment data for a given wine [wineId].
+  Future<Map<String, dynamic>> getMostTreatment(int wineId) async {
+    final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
+    debugPrint('[ApiService] getMostTreatment() - URL: $url');
+    try {
+      final response =
+          await http.get(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] getMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve MostTreatment for wine $wineId: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Updates the MostTreatment data for a given wine [wineId] using [treatmentData].
+  Future<void> updateMostTreatment(
+      int wineId, Map<String, dynamic> treatmentData) async {
+    final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
+    debugPrint('[ApiService] updateMostTreatment() - URL: $url');
+    debugPrint(
+        '[ApiService] updateMostTreatment() - Request body: $treatmentData');
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(treatmentData),
+      );
+      debugPrint(
+          '[ApiService] updateMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to update MostTreatment for wine $wineId: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Creates a new MostTreatment entry for a given wine [wineId] using [treatmentData].
+  Future<Map<String, dynamic>> createMostTreatment(
+      int wineId, Map<String, dynamic> treatmentData) async {
+    final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
+    debugPrint('[ApiService] createMostTreatment() - URL: $url');
+    debugPrint(
+        '[ApiService] createMostTreatment() - Request body: $treatmentData');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(treatmentData),
+      );
+      debugPrint(
+          '[ApiService] createMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] createMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to create MostTreatment for wine $wineId: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Deletes the MostTreatment data for a given wine [wineId].
+  Future<void> deleteMostTreatment(int wineId) async {
+    final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
+    debugPrint('[ApiService] deleteMostTreatment() - URL: $url');
+    try {
+      final response =
+          await http.delete(url, headers: {'Content-Type': 'application/json'});
+      debugPrint(
+          '[ApiService] deleteMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to delete MostTreatment for wine $wineId: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  // ==========================================================================
+  // ========== LOCAL HISTORY ==========
+  // ==========================================================================
+
   Future<void> _saveToLocalHistory(Map<String, dynamic> entry) async {
     final file = await _getLocalFile();
     List<Map<String, dynamic>> entries = await loadLocalHistory();
-
-    // Add the new entry
     entries.add(entry);
-
-    // Write the updated list to the file
     await file.writeAsString(jsonEncode(entries));
     debugPrint('[ApiService] _saveToLocalHistory() - Entry saved locally');
   }
 
-  /// Loads all fermentation entries from the local file for the history page.
   Future<List<Map<String, dynamic>>> loadLocalHistory() async {
     try {
       final file = await _getLocalFile();
       if (await file.exists()) {
         final content = await file.readAsString();
+        debugPrint('[ApiService] loadLocalHistory() - File content: $content');
         return List<Map<String, dynamic>>.from(jsonDecode(content));
       }
       return [];
@@ -324,9 +813,10 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Gets the local file for saving fermentation entries.
   Future<File> _getLocalFile() async {
     final directory = await getApplicationDocumentsDirectory();
-    return File('${directory.path}/fermentation_history.json');
+    final path = '${directory.path}/fermentation_history.json';
+    debugPrint('[ApiService] _getLocalFile() - Path: $path');
+    return File(path);
   }
 }

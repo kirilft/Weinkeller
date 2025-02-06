@@ -11,6 +11,7 @@ import '../pages/history.dart';
 import '../pages/changelog.dart';
 import '../components/qr_result.dart';
 import '../pages/create_user.dart';
+import '../pages/all_wines.dart';
 
 class AppRoutes {
   static const String initialRoute = '/';
@@ -34,6 +35,7 @@ class AppRoutes {
         return QRResultPage(qrCode: args is String ? args : '');
       },
       '/create_user': (context) => const CreateUserPage(),
+      '/all_wines': (context) => const AllWinesPage(),
     };
   }
 }

@@ -6,6 +6,7 @@ import 'package:weinkeller/services/database_service.dart';
 import 'package:flutter/services.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/config/custom_colors.dart';
+import 'package:weinkeller/components/pending_changes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -136,30 +137,49 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             _pendingChangesCount > 0
-                ? Container(
+                ? Padding(
                     padding: const EdgeInsets.only(right: 32),
-                    child: Stack(
-                      children: [
-                        Icon(
-                          FontAwesomeIcons.arrowsRotate,
-                          size: 32,
-                          color: theme.colorScheme.error,
-                        ),
-                        Positioned(
-                          right: 0,
-                          child: CircleAvatar(
-                            radius: 8,
-                            backgroundColor: theme.colorScheme.onError,
-                            child: Text(
-                              '$_pendingChangesCount',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: theme.colorScheme.error,
-                                  fontFamily: 'SF Pro'),
+                    child: GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor:
+                              Colors.black54, // darkens the background
+                          isScrollControlled: true,
+                          builder: (context) => Container(
+                            // Wrap with a Material to get default text styles.
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16)),
+                            ),
+                            child: const PendingChanges(),
+                          ),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          Icon(
+                            FontAwesomeIcons.arrowsRotate,
+                            size: 32,
+                            color: theme.colorScheme.error,
+                          ),
+                          Positioned(
+                            right: 0,
+                            child: CircleAvatar(
+                              radius: 8,
+                              backgroundColor: theme.colorScheme.onError,
+                              child: Text(
+                                '$_pendingChangesCount',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: theme.colorScheme.error,
+                                    fontFamily: 'SF Pro'),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   )
                 : const SizedBox(width: 64),

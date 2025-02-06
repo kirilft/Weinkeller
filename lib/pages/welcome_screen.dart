@@ -9,15 +9,6 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final welcomeTitleStyle = TextStyle(
-      color: theme.colorScheme.onSurface,
-      fontFamily: 'SFProDisplay',
-      fontSize: 34,
-      fontStyle: FontStyle.normal,
-      fontWeight: FontWeight.w400,
-      height: 41 / 34,
-      letterSpacing: 0.4,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -66,7 +57,15 @@ class WelcomeScreen extends StatelessWidget {
                       Text(
                         'Willkommen zur\nWeinkeller App',
                         textAlign: TextAlign.center,
-                        style: welcomeTitleStyle,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                          fontFamily: 'SFProDisplay',
+                          fontSize: 34,
+                          fontStyle: FontStyle.normal,
+                          fontWeight: FontWeight.w400,
+                          height: 41 / 34,
+                          letterSpacing: 0.4,
+                        ),
                       ),
                     ],
                   ),
@@ -98,11 +97,11 @@ class WelcomeScreen extends StatelessWidget {
                           style: TextStyle(
                             color: theme.colorScheme.onPrimary,
                             fontFamily: 'SFProDisplay',
-                            fontSize: 20,
+                            fontSize: 17,
                             fontStyle: FontStyle.normal,
                             fontWeight: FontWeight.w400,
-                            height: 1.25,
-                            letterSpacing: -0.45,
+                            height: 22 / 17,
+                            letterSpacing: -0.43,
                           ),
                         ),
                       ),
@@ -129,11 +128,11 @@ class WelcomeScreen extends StatelessWidget {
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontFamily: 'SFProDisplay',
-                            fontSize: 20,
+                            fontSize: 17,
                             fontStyle: FontStyle.normal,
                             fontWeight: FontWeight.w400,
-                            height: 1.25,
-                            letterSpacing: -0.45,
+                            height: 22 / 17,
+                            letterSpacing: -0.43,
                           ),
                         ),
                       ),
