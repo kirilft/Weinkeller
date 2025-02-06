@@ -143,18 +143,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         showModalBottomSheet(
                           context: context,
-                          backgroundColor:
-                              Colors.black54, // darkens the background
+                          backgroundColor: Colors
+                              .transparent, // So our container decoration shows properly.
                           isScrollControlled: true,
-                          builder: (context) => Container(
-                            // Wrap with a Material to get default text styles.
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16)),
-                            ),
-                            child: const PendingChanges(),
-                          ),
+                          builder: (context) {
+                            final screenHeight =
+                                MediaQuery.of(context).size.height;
+                            return Container(
+                              constraints: BoxConstraints(
+                                maxHeight: screenHeight *
+                                    0.5, // Limit to 50% of screen height.
+                              ),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              child: const PendingChanges(),
+                            );
+                          },
                         );
                       },
                       child: Stack(
@@ -172,9 +179,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Text(
                                 '$_pendingChangesCount',
                                 style: TextStyle(
-                                    fontSize: 10,
-                                    color: theme.colorScheme.error,
-                                    fontFamily: 'SF Pro'),
+                                  fontSize: 10,
+                                  color: theme.colorScheme.error,
+                                  fontFamily: 'SF Pro',
+                                ),
                               ),
                             ),
                           ),
