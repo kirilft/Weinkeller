@@ -38,7 +38,7 @@ class ApiService extends ChangeNotifier {
     if (newUrl.isEmpty) {
       debugPrint(
           '[ApiService] WARNING: Provided baseUrl is empty, using fallback');
-      _baseUrl = 'http://localhost:80/api';
+      _baseUrl = '';
     } else {
       _baseUrl = newUrl;
     }
@@ -88,7 +88,7 @@ class ApiService extends ChangeNotifier {
       debugPrint(
           '[ApiService] registerUser() - Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
@@ -199,7 +199,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] _loginUserNew() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] _loginUserNew() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final token = data['token'];
         if (token == null || token.toString().isEmpty) {
@@ -243,7 +243,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getAdditive() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getAdditive() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
@@ -336,7 +336,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] createAdditive() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] createAdditive() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
@@ -382,7 +382,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getFermentationEntry() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getFermentationEntry() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
@@ -494,7 +494,11 @@ class ApiService extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _saveToLocalHistory(body);
       } else {
+        debugPrint(
+            '[ApiService] _addFermentationEntryNew() - 4xx/5xx => storing in local DB');
         await _databaseService.insertPendingEntry(body);
+        debugPrint(
+            '[ApiService] _addFermentationEntryNew() - Inserted into pending_entries: $body');
       }
     } catch (e) {
       debugPrint('[ApiService] _addFermentationEntryNew() - Error: $e');
@@ -525,7 +529,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getAllWineNames() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getAllWineNames() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
@@ -558,7 +562,7 @@ class ApiService extends ChangeNotifier {
       debugPrint(
           '[ApiService] getWineById() - Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
@@ -592,7 +596,7 @@ class ApiService extends ChangeNotifier {
       debugPrint(
           '[ApiService] createWine() - Response code: ${response.statusCode}');
       debugPrint('[ApiService] createWine() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception('Failed to create wine: ${response.body}');
@@ -677,7 +681,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getWineAdditives() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getWineAdditives() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
@@ -708,7 +712,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getWineFermentationEntries() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getWineFermentationEntries() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
@@ -739,7 +743,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getMostTreatment() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getMostTreatment() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(
@@ -811,7 +815,7 @@ class ApiService extends ChangeNotifier {
           '[ApiService] createMostTreatment() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] createMostTreatment() - Response body: ${response.body}');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         throw Exception(

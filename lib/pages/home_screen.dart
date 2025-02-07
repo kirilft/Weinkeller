@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/config/custom_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
+import 'dart:ui' show FontFeature; // If you need FontFeature for your text
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,6 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _pickRandomGreeting();
     _loadPendingChangesCount();
+
+    // Register a global callback to update the count
+    DatabaseService.onPendingEntriesChanged = () {
+      _loadPendingChangesCount();
+    };
   }
 
   void _pickRandomGreeting() {
@@ -46,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _randomGreeting = _greetings[randomIndex];
   }
 
+  /// Loads how many pending entries exist and updates UI
   Future<void> _loadPendingChangesCount() async {
     try {
       final entries = await DatabaseService().getPendingEntries();
@@ -53,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _pendingChangesCount = entries.length;
       });
     } catch (e) {
-      print('[HomeScreen] Error loading pending changes count: $e');
+      debugPrint('[HomeScreen] Error loading pending changes count: $e');
     }
   }
 
@@ -100,6 +107,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _qrController?.dispose();
+    // Unregister the callback if you wish:
+    DatabaseService.onPendingEntriesChanged = null;
     super.dispose();
   }
 
@@ -123,10 +132,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'Home',
               style: TextStyle(
-                color: Theme.of(context).white,
-                fontFeatures: [
+                color: Colors.white, // Or your desired color
+                fontFeatures: const [
                   FontFeature.disable('liga'),
-                  FontFeature.disable('clig')
+                  FontFeature.disable('clig'),
                 ],
                 fontFamily: 'SF Pro',
                 fontSize: 28,
@@ -143,23 +152,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         showModalBottomSheet(
                           context: context,
-                          backgroundColor: Colors
-                              .transparent, // So our container decoration shows properly.
+                          backgroundColor: Colors.transparent,
                           isScrollControlled: true,
                           builder: (context) {
-                            final screenHeight =
-                                MediaQuery.of(context).size.height;
                             return Container(
-                              constraints: BoxConstraints(
-                                maxHeight: screenHeight *
-                                    0.5, // Limit to 50% of screen height.
+                              constraints: const BoxConstraints(
+                                maxHeight: 414,
                               ),
                               decoration: const BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16)),
+                                  top: Radius.circular(54),
+                                ),
                               ),
-                              child: const PendingChanges(),
+                              child: PendingChanges(
+                                  // If you still want direct callback usage, you can do:
+                                  // onChangesUpdated: _loadPendingChangesCount,
+                                  ),
                             );
                           },
                         );
@@ -203,7 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: EdgeInsets.zero,
                 padding: EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  // Use a custom color: redDark in light mode, or a dark grey in dark mode
                   color: isDarkMode ? Colors.grey[800] : AppColors.redDark,
                 ),
                 child: Center(
@@ -258,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Semi-transparent overlay for dark mode
+          // Dark overlay for dark mode
           if (isDarkMode)
             Container(
               color: Color.alphaBlend(
@@ -281,8 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: _showManualCodeDialog,
                         style: ElevatedButton.styleFrom(
                           elevation: 0, // Removes button shadow
-                          backgroundColor: const Color(
-                              0xFFEFEFF0), // Custom light gray background
+                          backgroundColor: const Color(0xFFEFEFF0),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -315,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            // QRView if no error
+            // Show QRView if no error
             QRView(
               key: _qrKey,
               onQRViewCreated: (QRViewController controller) {
@@ -338,6 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
             ),
+
           // Bottom navigation bar
           Positioned(
             bottom: 0,
@@ -347,9 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 100,
               child: ClipRect(
                 child: Container(
-                  color: isDarkMode
-                      ? const Color(0xCC000000)
-                      : const Color(0xCC000000),
+                  color: const Color(0xCC000000),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [

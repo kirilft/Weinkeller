@@ -36,6 +36,10 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+
+        tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << "-Xlint:-options"
+    }
 }
 
 flutter {
