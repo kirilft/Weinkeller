@@ -9,7 +9,7 @@ class PendingChanges extends StatefulWidget {
   /// Callback to notify HomeScreen that pending entries changed
   final VoidCallback? onChangesUpdated;
 
-  const PendingChanges({Key? key, this.onChangesUpdated}) : super(key: key);
+  const PendingChanges({super.key, this.onChangesUpdated});
 
   @override
   State<PendingChanges> createState() => _PendingChangesState();

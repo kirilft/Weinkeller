@@ -193,6 +193,14 @@ class _SettingsPageState extends State<SettingsPage> {
               'Light mode is recommended for daytime use, while dark mode reduces eye strain in low-light environments.',
               style: TextStyle(color: Colors.grey),
             ),
+            const SizedBox(height: 40),
+            const Divider(),
+            const SizedBox(height: 20),
+
+            const Text(
+              'Clear Cache 48mib',
+              style: TextStyle(color: Colors.grey),
+            )
           ],
         ),
       ),

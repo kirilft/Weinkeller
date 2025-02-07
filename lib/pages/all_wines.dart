@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import 'package:weinkeller/services/auth_service.dart';
 
 class AllWinesPage extends StatelessWidget {
-  const AllWinesPage({Key? key}) : super(key: key);
+  const AllWinesPage({super.key});
 
   Future<List<Map<String, dynamic>>> _fetchWines(BuildContext context) async {
     final apiService = Provider.of<ApiService>(context, listen: false);

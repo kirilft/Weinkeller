@@ -25,13 +25,18 @@ android {
 
     defaultConfig {
         applicationId "com.example.yourapp"  // Ensure this matches your namespace
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 33
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
+        debug {
+            debuggable true
+            // Optionally add custom logging flags or constants
+        }
+
         release {
             signingConfig = signingConfigs.debug
         }

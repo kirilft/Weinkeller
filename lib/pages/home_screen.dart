@@ -5,9 +5,8 @@ import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:weinkeller/services/database_service.dart';
 import 'package:flutter/services.dart';
 import 'package:weinkeller/config/app_colors.dart';
-import 'package:weinkeller/config/custom_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
-import 'dart:ui' show FontFeature; // If you need FontFeature for your text
+// If you need FontFeature for your text
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
