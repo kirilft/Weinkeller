@@ -18,7 +18,7 @@ Future<void> main() async {
 
     // Attempt to read baseUrl from secure storage; fallback to a default if none is found
     final savedBaseUrl = await secureStorage.read(key: 'baseUrl') ??
-        'https://api.kasai.tech/api';
+        '';
 
     // Create the ApiService with the base URL
     final apiService = ApiService(baseUrl: savedBaseUrl);

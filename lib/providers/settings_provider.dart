@@ -22,7 +22,7 @@ class SettingsProvider with ChangeNotifier {
     final storedToken = await secureStorage.read(key: _authTokenKey);
 
     // Use fallback if no baseURL is found
-    _baseURL = storedBaseUrl ?? 'http://localhost:80/api';
+    _baseURL = storedBaseUrl ?? 'https://api.kasai.tech/api';
     _authToken = storedToken;
     notifyListeners();
   }
