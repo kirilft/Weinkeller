@@ -39,10 +39,16 @@ class AllWinesPage extends StatelessWidget {
             itemCount: wines.length,
             itemBuilder: (context, index) {
               final wine = wines[index];
+              // Extracting all available fields
               final wineId = wine['id'];
-              final wineName = wine['name'] ?? '';
-              // If more information is available, adjust this as needed.
-              final otherInfo = wine['other'] ?? 'Additional info';
+              final userId = wine['userId'];
+              final name = wine['name'];
+              final mostWeight = wine['mostWeight'];
+              final harvestDate = wine['harvestDate'];
+              final volumeInHectoLitre = wine['volumeInHectoLitre'];
+              final container = wine['container'];
+              final productionType = wine['productionType'];
+              final mostTreatmentId = wine['mostTreatmentId'];
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -51,33 +57,32 @@ class AllWinesPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Top small: WineID
+                      // Display Wine ID
                       Text(
                         'WineID: #$wineId',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       const SizedBox(height: 4),
-                      // Winename as headline top
+                      // Display Wine Name
                       Text(
-                        wineName,
+                        name ?? '',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      // Small other information
+                      const SizedBox(height: 8),
+                      // Display all additional fields
+                      Text('User ID: ${userId ?? 'N/A'}'),
+                      Text('Most Weight: ${mostWeight ?? 'N/A'}'),
+                      Text('Harvest Date: ${harvestDate ?? 'N/A'}'),
                       Text(
-                        otherInfo,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                        ),
-                      ),
+                          'Volume (HectoLitre): ${volumeInHectoLitre ?? 'N/A'}'),
+                      Text('Container: ${container ?? 'N/A'}'),
+                      Text('Production Type: ${productionType ?? 'N/A'}'),
+                      Text('Most Treatment ID: ${mostTreatmentId ?? 'N/A'}'),
                     ],
                   ),
                 ),

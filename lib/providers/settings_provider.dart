@@ -5,7 +5,7 @@ class SettingsProvider with ChangeNotifier {
   static const _baseUrlKey = 'baseURL';
   static const _authTokenKey = 'authToken';
 
-  String _baseURL = 'http://localhost:80/api'; // default fallback
+  String _baseURL = 'https://api.kasai.tech/api'; // default fallback
   String? _authToken;
 
   SettingsProvider() {
