@@ -73,10 +73,21 @@ class _QRResultPageState extends State<QRResultPage> {
         _wineName = result['name'] ?? 'Unknown Wine';
       });
     } catch (e) {
-      setState(() {
-        _wineName = 'Unknown Wine';
-      });
       debugPrint('[QRResultPage] _fetchWineName() - Error: $e');
+      if (e.toString().contains('401')) {
+        // Navigate back to home and show the access denied message.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('You do not have access to this wine')),
+          );
+        });
+      } else {
+        setState(() {
+          _wineName = 'Unknown Wine';
+        });
+      }
     }
   }
 
@@ -89,7 +100,6 @@ class _QRResultPageState extends State<QRResultPage> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
     final token = authService.authToken;
-    final qrCode = widget.qrCode;
     final densityInput = _densityController.text.trim();
 
     if (token == null || token.isEmpty) {
@@ -116,7 +126,7 @@ class _QRResultPageState extends State<QRResultPage> {
     // Convert QR code to wineId.
     int wineId;
     try {
-      wineId = int.parse(qrCode);
+      wineId = int.parse(widget.qrCode);
     } catch (_) {
       _showErrorDialog('QR Code Error', 'Invalid QR Code for wine ID.');
       return;
@@ -177,7 +187,19 @@ class _QRResultPageState extends State<QRResultPage> {
       }
       _showSuccessSnackbar('Entry added successfully!');
     } catch (e) {
-      _showErrorDialog('Submission Error', e.toString());
+      debugPrint('[QRResultPage] _submitData() - Error: $e');
+      if (e.toString().contains('401')) {
+        // Navigate back to home and show the access denied message.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('You do not have access to this wine')),
+          );
+        });
+      } else {
+        _showErrorDialog('Submission Error', e.toString());
+      }
     } finally {
       setState(() => _isSubmitting = false);
     }
@@ -215,14 +237,17 @@ class _QRResultPageState extends State<QRResultPage> {
     );
   }
 
-  /// Displays a success snackbar.
+  /// Displays a success snackbar and navigates quickly to the main page.
   void _showSuccessSnackbar(String message) {
+    // Use a shorter snack bar duration for faster navigation.
     final snackBar = SnackBar(
       content: Text(message),
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 2000),
     );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((_) {
-      Navigator.of(context).pop(); // Navigate back after snackbar closes.
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    // After a short delay, navigate back to the main page.
+    Future.delayed(const Duration(milliseconds: 200), () {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     });
   }
 
