@@ -36,7 +36,7 @@ class _HistoryPageState extends State<HistoryPage> {
         final content = await file.readAsString();
         return List<Map<String, dynamic>>.from(jsonDecode(content));
       } else {
-        return []; // Return empty list if file doesn't exis
+        return []; // Return empty list if file doesn't exist
       }
     } catch (e) {
       print('[HistoryPage] Error loading history: $e');

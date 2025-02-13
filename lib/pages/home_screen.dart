@@ -6,7 +6,6 @@ import 'package:weinkeller/services/database_service.dart';
 import 'package:flutter/services.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
-// If you need FontFeature for your text
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +21,6 @@ class _HomeScreenState extends State<HomeScreen> {
   QRViewController? _qrController;
   String? _scannedCode;
   String? _errorMessage;
-  int _pendingChangesCount = 0;
 
   final List<String> _greetings = [
     'Hello',
@@ -38,29 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _pickRandomGreeting();
-    _loadPendingChangesCount();
-
-    // Register a global callback to update the count
-    DatabaseService.onPendingEntriesChanged = () {
-      _loadPendingChangesCount();
-    };
   }
 
   void _pickRandomGreeting() {
     final randomIndex = Random().nextInt(_greetings.length);
     _randomGreeting = _greetings[randomIndex];
-  }
-
-  /// Loads how many pending entries exist and updates UI
-  Future<void> _loadPendingChangesCount() async {
-    try {
-      final entries = await DatabaseService().getPendingEntries();
-      setState(() {
-        _pendingChangesCount = entries.length;
-      });
-    } catch (e) {
-      debugPrint('[HomeScreen] Error loading pending changes count: $e');
-    }
   }
 
   void _showManualCodeDialog() {
@@ -106,8 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _qrController?.dispose();
-    // Unregister the callback if you wish:
-    DatabaseService.onPendingEntriesChanged = null;
     super.dispose();
   }
 
@@ -131,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               'Home',
               style: TextStyle(
-                color: Colors.white, // Or your desired color
+                color: Colors.white,
                 fontFeatures: const [
                   FontFeature.disable('liga'),
                   FontFeature.disable('clig'),
@@ -144,61 +122,66 @@ class _HomeScreenState extends State<HomeScreen> {
                 letterSpacing: 0.38,
               ),
             ),
-            _pendingChangesCount > 0
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 32),
-                    child: GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          isScrollControlled: true,
-                          builder: (context) {
-                            return Container(
-                              constraints: const BoxConstraints(
-                                maxHeight: 414,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(54),
-                                ),
-                              ),
-                              child: PendingChanges(
-                                  // If you still want direct callback usage, you can do:
-                                  // onChangesUpdated: _loadPendingChangesCount,
+            // Use a StreamBuilder to listen for pending changes updates.
+            StreamBuilder<int>(
+              stream: DatabaseService().pendingChangesStream,
+              initialData: 0,
+              builder: (context, snapshot) {
+                final count = snapshot.data ?? 0;
+                return count > 0
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 32),
+                        child: GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              builder: (context) {
+                                return Container(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 414,
                                   ),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(54),
+                                    ),
+                                  ),
+                                  child: PendingChanges(),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          Icon(
-                            FontAwesomeIcons.arrowsRotate,
-                            size: 32,
-                            color: theme.colorScheme.error,
-                          ),
-                          Positioned(
-                            right: 0,
-                            child: CircleAvatar(
-                              radius: 8,
-                              backgroundColor: theme.colorScheme.onError,
-                              child: Text(
-                                '$_pendingChangesCount',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: theme.colorScheme.error,
-                                  fontFamily: 'SF Pro',
+                          child: Stack(
+                            children: [
+                              Icon(
+                                FontAwesomeIcons.arrowsRotate,
+                                size: 32,
+                                color: theme.colorScheme.error,
+                              ),
+                              Positioned(
+                                right: 0,
+                                child: CircleAvatar(
+                                  radius: 8,
+                                  backgroundColor: theme.colorScheme.onError,
+                                  child: Text(
+                                    '$count',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: theme.colorScheme.error,
+                                      fontFamily: 'SF Pro',
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  )
-                : const SizedBox(width: 64),
+                        ),
+                      )
+                    : const SizedBox(width: 64);
+              },
+            ),
           ],
         ),
       ),
@@ -287,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: ElevatedButton(
                         onPressed: _showManualCodeDialog,
                         style: ElevatedButton.styleFrom(
-                          elevation: 0, // Removes button shadow
+                          elevation: 0,
                           backgroundColor: const Color(0xFFEFEFF0),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -305,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           'Manuell Code eingeben',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: theme.colorScheme.primary,
                             fontFamily: 'SF Pro',
                             fontSize: 15,
                             fontStyle: FontStyle.normal,
@@ -344,7 +327,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
             ),
-
           // Bottom navigation bar
           Positioned(
             bottom: 0,

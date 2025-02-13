@@ -26,6 +26,7 @@ class QRResultPage extends StatefulWidget {
 
 class _QRResultPageState extends State<QRResultPage> {
   final TextEditingController _densityController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   bool _isSubmitting = false;
   String _wineName = '';
 
@@ -44,6 +45,13 @@ class _QRResultPageState extends State<QRResultPage> {
   void initState() {
     super.initState();
     _fetchWineName();
+  }
+
+  @override
+  void dispose() {
+    _densityController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchWineName() async {
@@ -285,68 +293,75 @@ class _QRResultPageState extends State<QRResultPage> {
       ),
       body: Align(
         alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 96),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Display the scanned wine ID.
-              Text(
-                'Scanned WineID: ${widget.qrCode}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 24),
-              // Display the wine name (or a loading message).
-              Text(
-                _wineName.isEmpty ? 'Loading...' : _wineName,
-                style: const TextStyle(
-                  color: Color(0xFF000000),
-                  fontFamily: 'SF Pro',
-                  fontSize: 20,
-                  fontStyle: FontStyle.normal,
-                  fontWeight: FontWeight.w400,
-                  height: 1.25,
-                  letterSpacing: -0.45,
-                  fontFeatures: [
-                    FontFeature.disable('liga'),
-                    FontFeature.disable('clig'),
-                  ],
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true, // Ensures the scrollbar is visible
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 96),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Display the scanned wine ID.
+                Text(
+                  'Scanned WineID: ${widget.qrCode}',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Density input field.
-              TextField(
-                controller: _densityController,
-                decoration: const InputDecoration(
-                  labelText: 'Density',
-                  hintText: 'Enter the density value (e.g., 0.98)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 24),
+                // Display the wine name (or a loading message).
+                Text(
+                  _wineName.isEmpty ? 'Loading...' : _wineName,
+                  style: const TextStyle(
+                    color: Color(0xFF000000),
+                    fontFamily: 'SF Pro',
+                    fontSize: 20,
+                    fontStyle: FontStyle.normal,
+                    fontWeight: FontWeight.w400,
+                    height: 1.25,
+                    letterSpacing: -0.45,
+                    fontFeatures: [
+                      FontFeature.disable('liga'),
+                      FontFeature.disable('clig'),
+                    ],
+                  ),
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 24),
-              // Additives Section.
-              Text(
-                'Additives (optional)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Column(
-                children: List.generate(_additiveEntries.length,
-                    (index) => _buildAdditiveRow(index)),
-              ),
-              const SizedBox(height: 24),
-              // Submit button.
-              _isSubmitting
-                  ? const Center(child: CircularProgressIndicator())
-                  : Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton(
-                        onPressed: _submitData,
-                        child: const Text('Submit'),
+                const SizedBox(height: 24),
+                // Density input field.
+                TextField(
+                  controller: _densityController,
+                  decoration: const InputDecoration(
+                    labelText: 'Density',
+                    hintText: 'Enter the density value (e.g., 0.98)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 24),
+                // Additives Section.
+                Text(
+                  'Additives (optional)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  children: List.generate(
+                    _additiveEntries.length,
+                    (index) => _buildAdditiveRow(index),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Submit button.
+                _isSubmitting
+                    ? const Center(child: CircularProgressIndicator())
+                    : Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton(
+                          onPressed: _submitData,
+                          child: const Text('Submit'),
+                        ),
                       ),
-                    ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
