@@ -1,7 +1,7 @@
 name: weinkeller
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: ^3.5.3
@@ -33,7 +33,7 @@ flutter:
     - assets/background/weinkeller.jpg
     - assets/logo.svg
   fonts:
-    - family: SFProDisplay
+    - family: SF Pro
       fonts:
         - asset: assets/fonts/SFProDisplay-Regular.otf
         - asset: assets/fonts/SFProDisplay-Bold.otf

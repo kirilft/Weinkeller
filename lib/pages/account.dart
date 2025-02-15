@@ -3,6 +3,37 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:weinkeller/services/auth_service.dart';
+// Add this import for FontFeature:
+import 'dart:ui' show FontFeature;
+
+/// AppBar TextStyle matching your Figma “Title1/Regular” specs.
+final TextStyle appBarTextStyle = TextStyle(
+  color: const Color(0xFF000000), // #000
+  fontFeatures: const <FontFeature>[
+    FontFeature.disable('liga'),
+    FontFeature.disable('clig'),
+  ],
+  fontFamily: "SF Pro",
+  fontSize: 28,
+  fontWeight: FontWeight.w400,
+  // 34px line-height / 28px font-size ≈ 1.2143
+  height: 34 / 28,
+  letterSpacing: 0.38,
+);
+
+/// TextStyle for other textual elements (optional).
+final TextStyle topTextStyle = TextStyle(
+  color: const Color.fromRGBO(60, 60, 67, 0.30),
+  fontFeatures: const <FontFeature>[
+    FontFeature.disable('liga'),
+    FontFeature.disable('clig'),
+  ],
+  fontFamily: "SF Pro",
+  fontSize: 17,
+  fontWeight: FontWeight.w400,
+  height: 22 / 17, // 22px line-height / 17px font-size
+  letterSpacing: -0.43,
+);
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -12,13 +43,15 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
-  // Controllers for account info (name and email)
+  // Controllers for account info (name and email).
+  // Initially set to empty; these will be updated after fetching from the API.
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+
   bool _isEditingName = false;
   bool _isEditingEmail = false;
 
-  // Controllers for password change fields
+  // Controllers for password change fields.
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmNewPasswordController =
@@ -27,9 +60,34 @@ class _AccountPageState extends State<AccountPage> {
   @override
   void initState() {
     super.initState();
-    // In a complete implementation, these values would come from your user model.
-    _nameController = TextEditingController(text: "John Doe");
-    _emailController = TextEditingController(text: "john.doe@example.com");
+
+    // Initialize text controllers with empty strings.
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+
+    // Load current user information (username, email) from the API.
+    _loadUserData();
+  }
+
+  /// Call the getCurrentUser() method from ApiService to get the
+  /// currently logged-in user's details. Then set them in the text fields.
+  Future<void> _loadUserData() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final apiService = Provider.of<ApiService>(context, listen: false);
+
+    try {
+      final userData = await apiService.getCurrentUser(
+        token: authService.authToken!,
+      );
+      // userData should contain keys like "username" and "email".
+      setState(() {
+        _nameController.text = userData["username"] ?? "";
+        _emailController.text = userData["email"] ?? "";
+      });
+    } catch (e) {
+      // Show a simple error dialog or handle otherwise as desired.
+      _showErrorDialog("Error", "Failed to load user data: $e");
+    }
   }
 
   @override
@@ -43,8 +101,8 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   /// Simulate updating account info (name or email).
+  /// In production, this would be a PUT or PATCH request to your API.
   Future<void> _updateAccountInfo(String field) async {
-    // TODO: Replace with real API integration.
     await Future.delayed(const Duration(seconds: 1));
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text("$field updated successfully")));
@@ -70,7 +128,7 @@ class _AccountPageState extends State<AccountPage> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
     try {
-      // TODO: Implement actual API integration for password change.
+      // Actual password change request.
       await apiService.changePassword(
         token: authService.authToken!,
         oldPassword: oldPass,
@@ -193,12 +251,13 @@ class _AccountPageState extends State<AccountPage> {
       appBar: AppBar(
         title: Text(
           "Account",
-          style: TextStyle(fontFamily: 'SFProDisplay', fontSize: 28),
+          style: appBarTextStyle, // Apply the new style here
         ),
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          // Horizontal padding of 40 for design accuracy
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -267,17 +326,17 @@ class _AccountPageState extends State<AccountPage> {
               const SizedBox(height: 32),
               // === Logout and Delete Account Links ===
               TextButton(
-                onPressed: _handleLogout,
+                onPressed: _handleDeleteAccount,
                 child: const Text(
-                  "Logout",
+                  "Delete Account",
                   style:
                       TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
-                onPressed: _handleDeleteAccount,
+                onPressed: _handleLogout,
                 child: const Text(
-                  "Delete Account",
+                  "Logout",
                   style:
                       TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                 ),

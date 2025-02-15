@@ -222,6 +222,39 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+/// Retrieves information for the current user.
+/// Requires a valid [token] for authorization.
+Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
+  final url = Uri.parse('$baseUrl/Users');
+  debugPrint('[ApiService] getCurrentUser() - URL: $url');
+
+  final headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+  try {
+    final response = await http.get(url, headers: headers);
+    debugPrint(
+        '[ApiService] getCurrentUser() - Response code: ${response.statusCode}');
+    debugPrint(
+        '[ApiService] getCurrentUser() - Response body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception(
+          'Failed to retrieve current user (status ${response.statusCode}): ${response.body}');
+    }
+  } catch (e) {
+    debugPrint('[ApiService] getCurrentUser() - Error: $e');
+    if (e.toString().contains('SocketException')) {
+      throw NoResponseException('Unable to connect to $url. Check your network.');
+    }
+    rethrow;
+  }
+}
+
   // ==========================================================================
   // ========== ADDITIVES ==========
   // ==========================================================================
