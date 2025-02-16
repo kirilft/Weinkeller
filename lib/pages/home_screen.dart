@@ -194,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: EdgeInsets.zero,
                 padding: EdgeInsets.zero,
                 decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[800] : AppColors.redDark,
+                  color: isDarkMode ? Colors.grey[800] : AppColors.red,
                 ),
                 child: Center(
                   child: Text(

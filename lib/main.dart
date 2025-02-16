@@ -17,8 +17,7 @@ Future<void> main() async {
     const secureStorage = FlutterSecureStorage();
 
     // Attempt to read baseUrl from secure storage; fallback to a default if none is found
-    final savedBaseUrl = await secureStorage.read(key: 'baseUrl') ??
-        '';
+    final savedBaseUrl = await secureStorage.read(key: 'baseUrl') ?? '';
 
     // Create the ApiService with the base URL
     final apiService = ApiService(baseUrl: savedBaseUrl);
@@ -64,21 +63,26 @@ class MyWeinkellerApp extends StatelessWidget {
 
     return ThemeData(
       brightness: brightness,
-      primaryColor: isLight ? AppColors.blueLight : AppColors.blueDark,
-      // New design: pure white for light mode and pure black for dark mode
-      scaffoldBackgroundColor:
-          isLight ? AppColors.whiteLight : AppColors.blackDark,
+      primaryColor: AppColors.cyan,
+      scaffoldBackgroundColor: isLight ? AppColors.white : AppColors.black,
       colorScheme: ColorScheme(
         brightness: brightness,
-        primary: isLight ? AppColors.blueLight : AppColors.blueDark,
-        onPrimary: isLight ? AppColors.whiteLight : AppColors.whiteDark,
-        secondary: isLight ? AppColors.greenLight : AppColors.greenDark,
-        onSecondary: isLight ? AppColors.whiteLight : AppColors.whiteDark,
-        error: isLight ? AppColors.redLight : AppColors.redDark,
-        onError: isLight ? AppColors.whiteLight : AppColors.whiteDark,
-        // Using the new background for surface as well
-        surface: isLight ? AppColors.whiteLight : AppColors.blackDark,
-        onSurface: isLight ? AppColors.blackLight : AppColors.whiteDark,
+        // Primary settings
+        primary: AppColors.cyan,
+        onPrimary: isLight ? AppColors.white : AppColors.black,
+        // Secondary settings
+        secondary: AppColors.orange,
+        onSecondary: isLight ? AppColors.white : AppColors.black,
+        // Error settings:
+        // For error backgrounds we’re using a neutral gray variant,
+        // while onError text will use the red you specified.
+        error: isLight ? AppColors.gray2 : AppColors.gray1,
+        onError: AppColors.red,
+        // Surface and background settings
+        surface: isLight ? AppColors.white : AppColors.black,
+        onSurface: isLight ? AppColors.black : AppColors.white,
+        background: isLight ? AppColors.white : AppColors.black,
+        onBackground: isLight ? AppColors.black : AppColors.white,
       ),
       fontFamily: 'SFProDisplay',
     );
