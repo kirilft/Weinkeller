@@ -9,8 +9,9 @@ import 'package:weinkeller/services/auth_service.dart';
 /// A simple data class to hold additive information.
 class _AdditiveEntry {
   String? selectedAdditive;
-  String amount;
-  _AdditiveEntry({this.selectedAdditive, this.amount = ''});
+  String amount = '';
+
+  _AdditiveEntry();
 }
 
 class QRResultPage extends StatefulWidget {
