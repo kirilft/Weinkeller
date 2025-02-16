@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:io'; // For file I/O
-import 'package:path_provider/path_provider.dart'; // For accessing local file paths
+import 'dart:io'; // For file I/O and SocketException
+import 'package:path_provider/path_provider.dart'; // For local file paths
 import 'package:http/http.dart' as http;
 import 'package:weinkeller/services/database_service.dart';
 import 'package:intl/intl.dart';
@@ -49,19 +49,18 @@ class ApiService extends ChangeNotifier {
   /// Constructor requires an initial base URL.
   ApiService({required String baseUrl}) : _baseUrl = baseUrl;
 
+  // A static cache for wine names
+  static Map<int, String> wineNameCache = {};
+
   // ==========================================================================
   // ========== USERS ==========
   // ==========================================================================
 
-  /// Logs in a user and returns a token if successful.
-  /// Throws [WrongPasswordException], [NoResponseException], or general [Exception].
   Future<String> loginUser(String email, String password) async {
     debugPrint('[ApiService] loginUser() called with email: $email');
     return await _loginUserNew(email, password);
   }
 
-  /// Registers a new user.
-  /// Returns the parsed user data on success.
   Future<Map<String, dynamic>> registerUser({
     required String username,
     required String email,
@@ -104,7 +103,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Changes the user password.
   Future<void> changePassword({
     required String token,
     required String oldPassword,
@@ -147,7 +145,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Deletes the user's account.
   Future<void> deleteAccount({required String token}) async {
     final url = Uri.parse('$baseUrl/Users');
     debugPrint('[ApiService] deleteAccount() - URL: $url');
@@ -222,44 +219,42 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-/// Retrieves information for the current user.
-/// Requires a valid [token] for authorization.
-Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
-  final url = Uri.parse('$baseUrl/Users');
-  debugPrint('[ApiService] getCurrentUser() - URL: $url');
+  Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
+    final url = Uri.parse('$baseUrl/Users');
+    debugPrint('[ApiService] getCurrentUser() - URL: $url');
 
-  final headers = {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer $token',
-  };
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
-  try {
-    final response = await http.get(url, headers: headers);
-    debugPrint(
-        '[ApiService] getCurrentUser() - Response code: ${response.statusCode}');
-    debugPrint(
-        '[ApiService] getCurrentUser() - Response body: ${response.body}');
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getCurrentUser() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getCurrentUser() - Response body: ${response.body}');
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    } else {
-      throw Exception(
-          'Failed to retrieve current user (status ${response.statusCode}): ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve current user (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getCurrentUser() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException(
+            'Unable to connect to $url. Check your network.');
+      }
+      rethrow;
     }
-  } catch (e) {
-    debugPrint('[ApiService] getCurrentUser() - Error: $e');
-    if (e.toString().contains('SocketException')) {
-      throw NoResponseException('Unable to connect to $url. Check your network.');
-    }
-    rethrow;
   }
-}
 
   // ==========================================================================
   // ========== ADDITIVES ==========
   // ==========================================================================
 
-  /// Retrieves an additive by [id].
   Future<Map<String, dynamic>> getAdditive(int id,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives/$id');
@@ -291,7 +286,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Updates an additive with [id] using [additive] data.
   Future<void> updateAdditive(int id, Map<String, dynamic> additive,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives/$id');
@@ -323,7 +317,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Deletes an additive with the given [id].
   Future<void> deleteAdditive(int id, {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives/$id');
     debugPrint('[ApiService] deleteAdditive() - URL: $url');
@@ -349,7 +342,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Creates a new additive.
   Future<Map<String, dynamic>> createAdditive(Map<String, dynamic> additive,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Additives');
@@ -388,7 +380,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
   // ========== FERMENTATION ENTRIES ==========
   // ==========================================================================
 
-  /// Adds a fermentation entry.
   Future<void> addFermentationEntry({
     required String token,
     required DateTime date,
@@ -400,7 +391,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
         token: token, date: date, density: density, wineId: wineId);
   }
 
-  /// Retrieves a fermentation entry by [id].
   Future<Map<String, dynamic>> getFermentationEntry(int id,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/FermentationEntries/$id');
@@ -430,7 +420,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Updates a fermentation entry with [id] using [entry] data.
   Future<void> updateFermentationEntry(int id, Map<String, dynamic> entry,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/FermentationEntries/$id');
@@ -463,7 +452,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Deletes a fermentation entry with [id].
   Future<void> deleteFermentationEntry(int id, {required String token}) async {
     final url = Uri.parse('$baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] deleteFermentationEntry() - URL: $url');
@@ -490,7 +478,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Internal method to add a fermentation entry.
   Future<void> _addFermentationEntryNew({
     required String token,
     required DateTime date,
@@ -547,7 +534,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
   // ========== WINES ==========
   // ==========================================================================
 
-  /// Retrieves all wine names.
   Future<List<Map<String, dynamic>>> getAllWineNames(
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines');
@@ -564,6 +550,12 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
           '[ApiService] getAllWineNames() - Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
+        // Update the local cache
+        for (var item in data) {
+          int wineId = item['id'];
+          String wineName = item['name'] ?? 'Unknown Wine';
+          wineNameCache[wineId] = wineName;
+        }
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
         throw Exception(
@@ -578,7 +570,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Retrieves a wine by [id].
   Future<Map<String, dynamic>> getWineById(int id,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
@@ -596,7 +587,13 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
           '[ApiService] getWineById() - Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        Map<String, dynamic> wine =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        // Update the local cache
+        int wineId = wine['id'];
+        String wineName = wine['name'] ?? 'Unknown Wine';
+        wineNameCache[wineId] = wineName;
+        return wine;
       } else {
         throw Exception(
             'Failed to retrieve wine (status ${response.statusCode}): ${response.body}');
@@ -610,7 +607,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Creates a new wine.
   Future<Map<String, dynamic>> createWine(Map<String, dynamic> wine,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines');
@@ -643,7 +639,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Updates an existing wine with [id] using [wine] data.
   Future<void> updateWine(int id, Map<String, dynamic> wine,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
@@ -674,7 +669,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Deletes a wine with the given [id].
   Future<void> deleteWine(int id, {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] deleteWine() - URL: $url');
@@ -699,7 +693,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Retrieves additives for a given wine [wineId].
   Future<List<Map<String, dynamic>>> getWineAdditives(int wineId,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/Additives');
@@ -730,7 +723,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Retrieves fermentation entries for a given wine [wineId].
   Future<List<Map<String, dynamic>>> getWineFermentationEntries(int wineId,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/FermentationEntries');
@@ -761,7 +753,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Retrieves the MostTreatment data for a given wine [wineId].
   Future<Map<String, dynamic>> getMostTreatment(int wineId,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
@@ -791,7 +782,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Updates the MostTreatment data for a given wine [wineId] using [treatmentData].
   Future<void> updateMostTreatment(
       int wineId, Map<String, dynamic> treatmentData,
       {required String token}) async {
@@ -826,7 +816,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Creates a new MostTreatment entry for a given wine [wineId] using [treatmentData].
   Future<Map<String, dynamic>> createMostTreatment(
       int wineId, Map<String, dynamic> treatmentData,
       {required String token}) async {
@@ -863,7 +852,6 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     }
   }
 
-  /// Deletes the MostTreatment data for a given wine [wineId].
   Future<void> deleteMostTreatment(int wineId, {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] deleteMostTreatment() - URL: $url');
@@ -922,5 +910,31 @@ Future<Map<String, dynamic>> getCurrentUser({required String token}) async {
     final path = '${directory.path}/fermentation_history.json';
     debugPrint('[ApiService] _getLocalFile() - Path: $path');
     return File(path);
+  }
+
+  int getCacheSize() {
+    return wineNameCache.length;
+  }
+
+  void deleteCache() {
+    wineNameCache.clear();
+    notifyListeners();
+  }
+
+  /// Forces an update of the wine cache by calling getAllWineNames.
+  /// If nothing changes in the cache, it logs that the cache did not change.
+  Future<void> updateCache({required String token}) async {
+    // Make a copy of the current cache.
+    final Map<int, String> oldCache = Map<int, String>.from(wineNameCache);
+
+    // Update the cache by calling getAllWineNames.
+    await getAllWineNames(token: token);
+
+    // Compare the old and new caches.
+    if (mapEquals(oldCache, wineNameCache)) {
+      debugPrint('[ApiService] updateCache() - Cache did not change.');
+    } else {
+      debugPrint('[ApiService] updateCache() - Cache updated successfully.');
+    }
   }
 }

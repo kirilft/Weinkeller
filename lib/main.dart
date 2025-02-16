@@ -8,6 +8,7 @@ import 'config/app_colors.dart';
 import 'config/theme.dart'; // Your ThemeProvider
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'config/font_theme.dart';
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -32,12 +33,58 @@ Future<void> main() async {
           ChangeNotifierProvider<AuthService>(create: (_) => authService),
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ],
-        child: const MyWeinkellerApp(),
+        // Wrap the app in CacheInitializer to update wine cache on launch.
+        child: const CacheInitializer(
+          child: MyWeinkellerApp(),
+        ),
       ),
     );
   }, (error, stackTrace) {
     debugPrint('GLOBAL ERROR HANDLER: $error\nStackTrace: $stackTrace');
   });
+}
+
+/// A top-level widget that updates (forces) the wine cache when the app launches.
+class CacheInitializer extends StatefulWidget {
+  final Widget child;
+  const CacheInitializer({Key? key, required this.child}) : super(key: key);
+
+  @override
+  _CacheInitializerState createState() => _CacheInitializerState();
+}
+
+class _CacheInitializerState extends State<CacheInitializer> {
+  @override
+  void initState() {
+    super.initState();
+    // Delay the cache update until after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateCache();
+    });
+  }
+
+  Future<void> _updateCache() async {
+    // Retrieve AuthService and ApiService from Provider.
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final token = authService.authToken;
+    if (token != null && token.isNotEmpty) {
+      try {
+        // Force update the cache by calling updateCache.
+        await apiService.updateCache(token: token);
+        debugPrint('Wine cache successfully forced updated on app launch.');
+      } catch (e) {
+        debugPrint('Error updating wine cache on app launch: $e');
+      }
+    } else {
+      debugPrint('No token available on app launch; skipping cache update.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
 }
 
 class MyWeinkellerApp extends StatelessWidget {
@@ -67,24 +114,19 @@ class MyWeinkellerApp extends StatelessWidget {
       scaffoldBackgroundColor: isLight ? AppColors.white : AppColors.black,
       colorScheme: ColorScheme(
         brightness: brightness,
-        // Primary settings
         primary: AppColors.cyan,
         onPrimary: isLight ? AppColors.white : AppColors.black,
-        // Secondary settings
         secondary: AppColors.orange,
         onSecondary: isLight ? AppColors.white : AppColors.black,
-        // Error settings:
-        // For error backgrounds we’re using a neutral gray variant,
-        // while onError text will use the red you specified.
         error: isLight ? AppColors.gray2 : AppColors.gray1,
         onError: AppColors.red,
-        // Surface and background settings
         surface: isLight ? AppColors.white : AppColors.black,
         onSurface: isLight ? AppColors.black : AppColors.white,
         background: isLight ? AppColors.white : AppColors.black,
         onBackground: isLight ? AppColors.black : AppColors.white,
       ),
-      fontFamily: 'SFProDisplay',
+      textTheme: FontTheme.getTextTheme(brightness),
+      fontFamily: 'SF Pro',
     );
   }
 }

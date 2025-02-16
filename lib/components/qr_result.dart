@@ -1,4 +1,5 @@
 import 'dart:ui'; // For FontFeature
+import 'dart:io'; // For SocketException
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -45,6 +46,8 @@ class _QRResultPageState extends State<QRResultPage> {
   @override
   void initState() {
     super.initState();
+    // Update the local cache for fresh data on page open.
+    _updateWineCache();
     _fetchWineName();
   }
 
@@ -55,24 +58,60 @@ class _QRResultPageState extends State<QRResultPage> {
     super.dispose();
   }
 
+  /// Updates the local cache of wine names by calling getAllWineNames.
+  Future<void> _updateWineCache() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.authToken;
+    if (token == null || token.isEmpty) return;
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    try {
+      await apiService.getAllWineNames(token: token);
+    } catch (e) {
+      debugPrint('Error updating wine cache: $e');
+      // Optionally handle the error.
+    }
+  }
+
+  /// Fetches the wine name using local cache first, then the API.
   Future<void> _fetchWineName() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.authToken;
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _wineName = 'Unknown Wine';
+      });
+      return;
+    }
+    final wineId = int.tryParse(widget.qrCode);
+    if (wineId == null) {
+      _showErrorDialog('QR Code Error', 'Invalid QR Code for wine ID.');
+      return;
+    }
+    // Check if the wine name is already cached.
+    final cachedName = ApiService.wineNameCache[wineId];
+    if (cachedName != null) {
+      setState(() {
+        _wineName = cachedName;
+      });
+      return;
+    }
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
-      final authService = Provider.of<AuthService>(context, listen: false);
-      // Parse the QR code as wineId.
-      final wineId = int.parse(widget.qrCode);
-      // Retrieve the token; if null, we cannot fetch the wine name.
-      final token = authService.authToken;
-      if (token == null || token.isEmpty) {
-        setState(() {
-          _wineName = 'Unknown Wine';
-        });
-        return;
-      }
       final result = await apiService.getWineById(wineId, token: token);
+      final String wineName = result['name'] ?? 'Unknown Wine';
+      // Update the cache.
+      ApiService.wineNameCache[wineId] = wineName;
       setState(() {
-        _wineName = result['name'] ?? 'Unknown Wine';
+        _wineName = wineName;
       });
+    } on SocketException catch (e) {
+      debugPrint('[QRResultPage] _fetchWineName() - Offline Error: $e');
+      final continueOffline = await _showOfflineDialog();
+      if (continueOffline) {
+        setState(() {
+          _wineName = cachedName ?? 'Unknown Wine';
+        });
+      }
     } catch (e) {
       debugPrint('[QRResultPage] _fetchWineName() - Error: $e');
       if (e.toString().contains('401')) {
@@ -90,6 +129,29 @@ class _QRResultPageState extends State<QRResultPage> {
         });
       }
     }
+  }
+
+  /// Shows a dialog asking if the user wants to continue offline.
+  Future<bool> _showOfflineDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Offline'),
+            content: const Text(
+                'You seem to be offline. Do you still want to continue?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   /// Submits the fermentation entry and/or additives.
@@ -240,13 +302,11 @@ class _QRResultPageState extends State<QRResultPage> {
 
   /// Displays a success snackbar and navigates quickly to the main page.
   void _showSuccessSnackbar(String message) {
-    // Use a shorter snack bar duration for faster navigation.
     final snackBar = SnackBar(
       content: Text(message),
       duration: const Duration(milliseconds: 2000),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    // After a short delay, navigate back to the main page.
     Future.delayed(const Duration(milliseconds: 200), () {
       Navigator.of(context).popUntil((route) => route.isFirst);
     });
@@ -321,20 +381,18 @@ class _QRResultPageState extends State<QRResultPage> {
         alignment: Alignment.topCenter,
         child: Scrollbar(
           controller: _scrollController,
-          thumbVisibility: true, // Ensures the scrollbar is visible
+          thumbVisibility: true,
           child: SingleChildScrollView(
             controller: _scrollController,
             padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 96),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Display the scanned wine ID.
                 Text(
                   'Scanned WineID: ${widget.qrCode}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 24),
-                // Display the wine name (or a loading message).
                 Text(
                   _wineName.isEmpty ? 'Loading...' : _wineName,
                   style: const TextStyle(
@@ -352,7 +410,6 @@ class _QRResultPageState extends State<QRResultPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Density input field.
                 TextField(
                   controller: _densityController,
                   decoration: const InputDecoration(
@@ -363,7 +420,6 @@ class _QRResultPageState extends State<QRResultPage> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 24),
-                // Additives Section.
                 Text(
                   'Additives (optional)',
                   style: Theme.of(context).textTheme.titleMedium,
@@ -376,7 +432,6 @@ class _QRResultPageState extends State<QRResultPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Submit button.
                 _isSubmitting
                     ? const Center(child: CircularProgressIndicator())
                     : Align(
