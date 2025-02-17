@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../config/app_colors.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -59,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: theme.colorScheme.onSurface,
-                          fontFamily: 'SFProDisplay',
+                          fontFamily: 'SF Pro',
                           fontSize: 34,
                           fontStyle: FontStyle.normal,
                           fontWeight: FontWeight.w400,
@@ -83,7 +84,8 @@ class WelcomeScreen extends StatelessWidget {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           elevation: 0, // Removes button shadow
-                          backgroundColor: Color(0xFF002032),
+                          backgroundColor:
+                              AppColors.gray1, // Custom primary color
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -96,7 +98,7 @@ class WelcomeScreen extends StatelessWidget {
                           'Account Erstellen',
                           style: TextStyle(
                             color: theme.colorScheme.onPrimary,
-                            fontFamily: 'SFProDisplay',
+                            fontFamily: 'SF Pro',
                             fontSize: 17,
                             fontStyle: FontStyle.normal,
                             fontWeight: FontWeight.w400,
@@ -113,12 +115,11 @@ class WelcomeScreen extends StatelessWidget {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           elevation: 0, // Removes button shadow
-                          backgroundColor:
-                              const Color(0xFFEFEFF0), // Custom light gray
+                          backgroundColor: AppColors.gray2, // Custom light gray
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             side: const BorderSide(
-                              color: Color(0xFF002032), // The border color
+                              color: AppColors.gray1, // The border color
                               width: 3.0, // Border thickness
                             ),
                             borderRadius: BorderRadius.circular(30),
@@ -130,8 +131,8 @@ class WelcomeScreen extends StatelessWidget {
                         child: Text(
                           'Anmelden',
                           style: TextStyle(
-                            color: Color(0xFF002032),
-                            fontFamily: 'SFProDisplay',
+                            color: AppColors.gray1,
+                            fontFamily: 'SF Pro',
                             fontSize: 17,
                             fontStyle: FontStyle.normal,
                             fontWeight: FontWeight.w400,

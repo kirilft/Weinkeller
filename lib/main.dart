@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'generated/l10n.dart'; // Localization import
 
 import 'config/routes.dart';
 import 'config/app_colors.dart';
-import 'config/theme.dart'; // Your ThemeProvider
+import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'config/font_theme.dart';
@@ -47,7 +49,7 @@ Future<void> main() async {
 /// A top-level widget that updates (forces) the wine cache when the app launches.
 class CacheInitializer extends StatefulWidget {
   final Widget child;
-  const CacheInitializer({Key? key, required this.child}) : super(key: key);
+  const CacheInitializer({super.key, required this.child});
 
   @override
   _CacheInitializerState createState() => _CacheInitializerState();
@@ -72,7 +74,7 @@ class _CacheInitializerState extends State<CacheInitializer> {
       try {
         // Force update the cache by calling updateCache.
         await apiService.updateCache(token: token);
-        debugPrint('Wine cache successfully forced updated on app launch.');
+        debugPrint('Wine cache successfully updated on app launch.');
       } catch (e) {
         debugPrint('Error updating wine cache on app launch: $e');
       }
@@ -87,8 +89,21 @@ class _CacheInitializerState extends State<CacheInitializer> {
   }
 }
 
-class MyWeinkellerApp extends StatelessWidget {
+class MyWeinkellerApp extends StatefulWidget {
   const MyWeinkellerApp({super.key});
+
+  @override
+  _MyWeinkellerAppState createState() => _MyWeinkellerAppState();
+}
+
+class _MyWeinkellerAppState extends State<MyWeinkellerApp> {
+  Locale _locale = const Locale('en'); // Default language
+
+  void _changeLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +117,20 @@ class MyWeinkellerApp extends StatelessWidget {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeProvider.themeMode,
+      locale: _locale, // Set current locale
+      supportedLocales: S.delegate.supportedLocales,
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      builder: (context, child) {
+        return LanguageChangeNotifier(
+          onLocaleChanged: _changeLocale,
+          child: child ?? const SizedBox(),
+        );
+      },
     );
   }
 
@@ -122,11 +151,29 @@ class MyWeinkellerApp extends StatelessWidget {
         onError: AppColors.red,
         surface: isLight ? AppColors.white : AppColors.black,
         onSurface: isLight ? AppColors.black : AppColors.white,
-        background: isLight ? AppColors.white : AppColors.black,
-        onBackground: isLight ? AppColors.black : AppColors.white,
       ),
       textTheme: FontTheme.getTextTheme(brightness),
       fontFamily: 'SF Pro',
     );
+  }
+}
+
+/// Widget to notify locale changes
+class LanguageChangeNotifier extends InheritedWidget {
+  final Function(Locale) onLocaleChanged;
+
+  const LanguageChangeNotifier({
+    super.key,
+    required this.onLocaleChanged,
+    required Widget child,
+  }) : super(child: child);
+
+  static LanguageChangeNotifier? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<LanguageChangeNotifier>();
+  }
+
+  @override
+  bool updateShouldNotify(LanguageChangeNotifier oldWidget) {
+    return onLocaleChanged != oldWidget.onLocaleChanged;
   }
 }

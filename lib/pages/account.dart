@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:weinkeller/services/auth_service.dart';
 // Add this import for FontFeature:
-import 'dart:ui' show FontFeature;
 
 /// AppBar TextStyle matching your Figma “Title1/Regular” specs.
 final TextStyle appBarTextStyle = TextStyle(

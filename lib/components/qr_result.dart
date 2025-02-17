@@ -33,7 +33,7 @@ class _QRResultPageState extends State<QRResultPage> {
   String _wineName = '';
 
   // List to hold additive entries; starts with one empty entry.
-  List<_AdditiveEntry> _additiveEntries = [_AdditiveEntry()];
+  final List<_AdditiveEntry> _additiveEntries = [_AdditiveEntry()];
 
   // Sample list of available additives.
   final List<String> _availableAdditives = [

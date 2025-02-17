@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/services/auth_service.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -119,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
           'Anmelden',
           style: TextStyle(
             color: theme.colorScheme.onSurface,
-            fontFamily: 'SFProDisplay',
+            fontFamily: 'SF Pro',
             fontSize: 28,
             fontStyle: FontStyle.normal,
             fontWeight: FontWeight.w400,
@@ -177,8 +178,8 @@ class _LoginPageState extends State<LoginPage> {
                 label: Text(
                   'Passwort vergessen?',
                   style: TextStyle(
-                    color: theme.colorScheme.onSurface,
-                    fontFamily: 'SFProDisplay',
+                    color: AppColors.blue,
+                    fontFamily: 'SF Pro',
                     fontSize: 13,
                     fontStyle: FontStyle.normal,
                     fontWeight: FontWeight.w400,
@@ -193,8 +194,8 @@ class _LoginPageState extends State<LoginPage> {
               child: ElevatedButton(
                 onPressed: _handleLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
                     vertical: 15,
@@ -203,8 +204,8 @@ class _LoginPageState extends State<LoginPage> {
                 child: Text(
                   'Anmelden',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'SFProDisplay',
+                    color: theme.colorScheme.onPrimary,
+                    fontFamily: 'SF Pro',
                     fontSize: 15,
                     fontStyle: FontStyle.normal,
                     fontWeight: FontWeight.w400,

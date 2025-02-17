@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:weinkeller/config/app_colors.dart';
 
 import 'package:weinkeller/config/theme.dart';
 import 'package:weinkeller/services/auth_service.dart';
@@ -34,7 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
     const secureStorage = FlutterSecureStorage();
     final storedBaseUrl = await secureStorage.read(key: 'baseUrl');
     // Fallback if none found.
-    _baseUrlController.text = storedBaseUrl ?? 'http://localhost:80/api';
+    _baseUrlController.text = storedBaseUrl ?? '';
 
     setState(() {
       _isLoading = false;
@@ -114,7 +115,7 @@ class _SettingsPageState extends State<SettingsPage> {
     const suffixes = ["B", "KB", "MB", "GB", "TB"];
     int i = (log(bytes) / log(1024)).floor();
     double value = bytes / pow(1024, i);
-    return value.toStringAsFixed(decimals) + " " + suffixes[i];
+    return "${value.toStringAsFixed(decimals)} ${suffixes[i]}";
   }
 
   @override
@@ -173,7 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 40),
             const Text(
               'Changes may require restarting the app or re-initializing the ApiService to take full effect.',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: AppColors.gray2),
             ),
             // --- Theme Settings ---
             const SizedBox(height: 40),

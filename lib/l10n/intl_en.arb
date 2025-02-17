@@ -1,0 +1,60 @@
+{
+    "@@locale": "en",
+    "allWines": "All Wines",
+    "wineId": "WineID: #{wineId}",
+    "userId": "User ID: {userId}",
+    "mostWeight": "Most Weight: {mostWeight}",
+    "harvestDate": "Harvest Date: {harvestDate}",
+    "volume": "Volume (HectoLitre): {volumeInHectoLitre}",
+    "container": "Container: {container}",
+    "productionType": "Production Type: {productionType}",
+    "mostTreatmentId": "Most Treatment ID: {mostTreatmentId}",
+    
+    "changelog": "Changelog",
+    "redirectingToChangelog": "Redirecting to the changelog...",
+    "errorOpeningChangelog": "Could not open the changelog website",
+  
+    "account": "Account",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "validationError": "Validation Error",
+    "passwordMismatch": "Passwords do not match.",
+    "registerError": "Registration Error",
+    "loginError": "Login Error",
+    "accountCreationFailed": "Account created but failed to log in automatically.",
+    "createAccount": "Create Account",
+    "register": "Register",
+  
+    "history": "History",
+    "noHistoryAvailable": "No history available.",
+    "density": "Density: {density}",
+    "date": "Date: {date}",
+  
+    "home": "Home",
+    "manualEntry": "Manual Entry",
+    "enterWineId": "Enter WineID",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "settings": "Settings",
+    "qrScanner": "QR Scanner",
+    
+    "login": "Login",
+    "forgotPassword": "Forgot Password?",
+    "loginFailed": "Login failed",
+    
+    "settingsTitle": "Settings",
+    "baseUrl": "Base URL",
+    "save": "Save",
+    "appearance": "Appearance",
+    "lightMode": "Light",
+    "darkMode": "Dark",
+    "clearCache": "Clear Cache",
+    "cacheCleared": "Cache cleared",
+  
+    "welcomeTitle": "Welcome to Weinkeller App",
+    "createAccountButton": "Create Account",
+    "loginButton": "Login"
+  }
+  

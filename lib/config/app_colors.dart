@@ -11,6 +11,6 @@ class AppColors {
   static const Color cyan = Color(0xFF0A7D96); // Primary color
   static const Color orange = Color(0xFFFFAD4C); // Secondary color
   static const Color red = Color(0xFFEC6665); // onError color
-
+  static const Color blue = Color(0xFF2997FF);
   // If you need additional variants for light and dark themes, you can define them here.
 }

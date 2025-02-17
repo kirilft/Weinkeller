@@ -1,0 +1,60 @@
+{
+    "@@locale": "de",
+    "allWines": "Alle Weine",
+    "wineId": "Wein-ID: #{wineId}",
+    "userId": "Benutzer-ID: {userId}",
+    "mostWeight": "Mostgewicht: {mostWeight}",
+    "harvestDate": "Erntedatum: {harvestDate}",
+    "volume": "Volumen (Hektoliter): {volumeInHectoLitre}",
+    "container": "Behälter: {container}",
+    "productionType": "Produktionstyp: {productionType}",
+    "mostTreatmentId": "Mostbehandlungs-ID: {mostTreatmentId}",
+  
+    "changelog": "Änderungsprotokoll",
+    "redirectingToChangelog": "Weiterleitung zum Änderungsprotokoll...",
+    "errorOpeningChangelog": "Konnte die Website des Änderungsprotokolls nicht öffnen",
+  
+    "account": "Konto",
+    "name": "Name",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "validationError": "Validierungsfehler",
+    "passwordMismatch": "Passwörter stimmen nicht überein.",
+    "registerError": "Registrierungsfehler",
+    "loginError": "Anmeldefehler",
+    "accountCreationFailed": "Konto erstellt, aber die automatische Anmeldung ist fehlgeschlagen.",
+    "createAccount": "Konto erstellen",
+    "register": "Registrieren",
+  
+    "history": "Verlauf",
+    "noHistoryAvailable": "Kein Verlauf verfügbar.",
+    "density": "Dichte: {density}",
+    "date": "Datum: {date}",
+  
+    "home": "Startseite",
+    "manualEntry": "Manuelle Eingabe",
+    "enterWineId": "Wein-ID eingeben",
+    "cancel": "Abbrechen",
+    "ok": "OK",
+    "settings": "Einstellungen",
+    "qrScanner": "QR-Scanner",
+  
+    "login": "Anmelden",
+    "forgotPassword": "Passwort vergessen?",
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    
+    "settingsTitle": "Einstellungen",
+    "baseUrl": "Basis-URL",
+    "save": "Speichern",
+    "appearance": "Erscheinungsbild",
+    "lightMode": "Hell",
+    "darkMode": "Dunkel",
+    "clearCache": "Cache leeren",
+    "cacheCleared": "Cache geleert",
+  
+    "welcomeTitle": "Willkommen zur Weinkeller App",
+    "createAccountButton": "Konto erstellen",
+    "loginButton": "Anmelden"
+  }
+  
