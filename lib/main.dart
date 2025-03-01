@@ -165,8 +165,8 @@ class LanguageChangeNotifier extends InheritedWidget {
   const LanguageChangeNotifier({
     super.key,
     required this.onLocaleChanged,
-    required Widget child,
-  }) : super(child: child);
+    required super.child,
+  });
 
   static LanguageChangeNotifier? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<LanguageChangeNotifier>();

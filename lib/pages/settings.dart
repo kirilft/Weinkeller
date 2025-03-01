@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:weinkeller/config/app_colors.dart';
-
 import 'package:weinkeller/config/theme.dart';
 import 'package:weinkeller/services/auth_service.dart';
 import 'package:weinkeller/services/api_service.dart';
@@ -30,12 +29,27 @@ class _SettingsPageState extends State<SettingsPage> {
     _updateCacheSize(); // Update the cache size on init
   }
 
+  /// Sanitizes the URL ensuring it starts with 'https://' and ends with '/api'
+  String _sanitizeUrl(String url) {
+    String sanitized = url.trim();
+    if (!sanitized.startsWith('https://')) {
+      sanitized = 'https://' + sanitized;
+    }
+    if (!sanitized.endsWith('/api')) {
+      sanitized = sanitized + '/api';
+    }
+    return sanitized;
+  }
+
   /// Loads the saved base URL from secure storage.
   Future<void> _loadSettings() async {
     const secureStorage = FlutterSecureStorage();
     final storedBaseUrl = await secureStorage.read(key: 'baseUrl');
-    // Fallback if none found.
-    _baseUrlController.text = storedBaseUrl ?? '';
+    // Use fallback if none is found; otherwise, sanitize the stored URL.
+    _baseUrlController.text =
+        (storedBaseUrl != null && storedBaseUrl.isNotEmpty)
+            ? _sanitizeUrl(storedBaseUrl)
+            : 'https://api.kasai.tech/api';
 
     setState(() {
       _isLoading = false;
@@ -50,13 +64,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// Saves new baseURL to secure storage and clears the token if changed.
   Future<void> _saveSettings() async {
-    final newBaseUrl = _baseUrlController.text.trim();
+    String newBaseUrl = _baseUrlController.text.trim();
     if (newBaseUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Base URL cannot be empty')),
       );
       return;
     }
+
+    // Sanitize the URL to ensure it starts with 'https://' and ends with '/api'
+    newBaseUrl = _sanitizeUrl(newBaseUrl);
+
     if (!_isValidUrl(newBaseUrl)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid URL format')),
@@ -69,7 +87,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (oldBaseUrl != newBaseUrl) {
       debugPrint('SETTINGS: BaseURL changed from $oldBaseUrl to $newBaseUrl');
-      // Clear the existing token so user must reauthenticate.
+      // Clear the existing token so the user must reauthenticate.
       final authService = context.read<AuthService>();
       await authService.clearAuthToken();
 
@@ -78,6 +96,8 @@ class _SettingsPageState extends State<SettingsPage> {
       apiService.baseUrl = newBaseUrl;
 
       await secureStorage.write(key: 'baseUrl', value: newBaseUrl);
+      // Update the controller text to reflect the sanitized URL.
+      _baseUrlController.text = newBaseUrl;
     } else {
       debugPrint(
           'SETTINGS: BaseURL is unchanged ($oldBaseUrl). Token remains valid.');
