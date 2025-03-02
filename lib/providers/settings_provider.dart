@@ -19,10 +19,10 @@ class SettingsProvider with ChangeNotifier {
   String _sanitizeUrl(String url) {
     String sanitized = url.trim();
     if (!sanitized.startsWith('https://')) {
-      sanitized = 'https://' + sanitized;
+      sanitized = 'https://$sanitized';
     }
     if (!sanitized.endsWith('/api')) {
-      sanitized = sanitized + '/api';
+      sanitized = '$sanitized/api';
     }
     return sanitized;
   }
