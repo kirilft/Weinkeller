@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -44,8 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
   /// Loads the saved base URL from secure storage.
   Future<void> _loadSettings() async {
     const secureStorage = FlutterSecureStorage();
-    final storedBaseUrl = await secureStorage.read(key: 'baseUrl');
-    // Use fallback if none is found; otherwise, sanitize the stored URL.
+    final storedBaseUrl = await secureStorage.read(key: 'baseURL');
     _baseUrlController.text =
         (storedBaseUrl != null && storedBaseUrl.isNotEmpty)
             ? _sanitizeUrl(storedBaseUrl)
@@ -62,7 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return uri != null && uri.hasScheme && uri.host.isNotEmpty;
   }
 
-  /// Saves new baseURL to secure storage and clears the token if changed.
+  /// Saves new baseURL and clears the token if changed.
   Future<void> _saveSettings() async {
     String newBaseUrl = _baseUrlController.text.trim();
     if (newBaseUrl.isEmpty) {
@@ -82,21 +80,18 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
-    const secureStorage = FlutterSecureStorage();
-    final oldBaseUrl = await secureStorage.read(key: 'baseUrl') ?? '';
+    final secureStorage = const FlutterSecureStorage();
+    final oldBaseUrl = await secureStorage.read(key: 'baseURL') ?? '';
 
     if (oldBaseUrl != newBaseUrl) {
       debugPrint('SETTINGS: BaseURL changed from $oldBaseUrl to $newBaseUrl');
-      // Clear the existing token so the user must reauthenticate.
       final authService = context.read<AuthService>();
       await authService.clearAuthToken();
 
-      // Also update the ApiService instance in-memory.
       final apiService = context.read<ApiService>();
       apiService.baseUrl = newBaseUrl;
 
-      await secureStorage.write(key: 'baseUrl', value: newBaseUrl);
-      // Update the controller text to reflect the sanitized URL.
+      await secureStorage.write(key: 'baseURL', value: newBaseUrl);
       _baseUrlController.text = newBaseUrl;
     } else {
       debugPrint(
@@ -110,16 +105,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  /// Updates the cache size by computing the size of the wineNameCache.
+  /// Updates the cache size by computing the size of ApiService.wineNameCache.
   void _updateCacheSize() {
-    // Use the class name to access the static property.
     final bytes = utf8.encode(jsonEncode(ApiService.wineNameCache)).length;
     setState(() {
       _cacheSize = bytes;
     });
   }
 
-  /// Clears the wine name cache and updates the displayed cache size.
+  /// Clears the cache and updates the displayed cache size.
   void _clearCache() {
     final apiService = context.read<ApiService>();
     apiService.deleteCache();
@@ -129,7 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// Helper function to format bytes into a human-readable string.
+  /// Formats bytes into a human-readable string.
   String _formatBytes(int bytes, [int decimals = 2]) {
     if (bytes <= 0) return "0 B";
     const suffixes = ["B", "KB", "MB", "GB", "TB"];
@@ -161,7 +155,7 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // Go back.
+            Navigator.pop(context);
           },
         ),
       ),
@@ -187,17 +181,38 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveSettings,
-              child: const Text('Save'),
+            // Save Button aligned to the right with fixed width.
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: AppColors.gray1,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: _saveSettings,
+                  child: Text(
+                    'Save',
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.onPrimary,
+                      fontFamily: 'SF Pro',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.43,
+                    ),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 40),
-            const Text(
-              'Changes may require restarting the app or re-initializing the ApiService to take full effect.',
-              style: TextStyle(color: AppColors.gray2),
-            ),
             // --- Theme Settings ---
-            const SizedBox(height: 40),
             const Divider(),
             const SizedBox(height: 20),
             const Text(
@@ -246,11 +261,37 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            // --- Cache Management ---
-            ListTile(
-              title: const Text('Clear Cache'),
-              trailing: Text(_formatBytes(_cacheSize)),
-              onTap: _clearCache,
+            // Clear Cache Button aligned to the right with fixed width.
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: AppColors.gray2,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(
+                        color: AppColors.gray1,
+                        width: 3.0,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: _clearCache,
+                  child: Text(
+                    'Clear Cache (${_formatBytes(_cacheSize)})',
+                    style: const TextStyle(
+                      color: AppColors.gray1,
+                      fontFamily: 'SF Pro',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.43,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

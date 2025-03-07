@@ -10,7 +10,6 @@ import 'config/app_colors.dart';
 import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
-import 'config/font_theme.dart';
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -152,7 +151,6 @@ class _MyWeinkellerAppState extends State<MyWeinkellerApp> {
         surface: isLight ? AppColors.white : AppColors.black,
         onSurface: isLight ? AppColors.black : AppColors.white,
       ),
-      textTheme: FontTheme.getTextTheme(brightness),
       fontFamily: 'SF Pro',
     );
   }

@@ -4,14 +4,12 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../pages/home_screen.dart';
 import '../pages/login.dart';
-import '../pages/welcome_screen.dart'; // <--- import the new file
+import '../pages/welcome_screen.dart';
 import '../pages/settings.dart';
 import '../pages/account.dart';
 import '../pages/history.dart';
-import '../pages/changelog.dart';
 import '../components/qr_result.dart';
 import '../pages/create_user.dart';
-import '../pages/all_wines.dart';
 
 class AppRoutes {
   static const String initialRoute = '/';
@@ -29,13 +27,11 @@ class AppRoutes {
       '/settings': (context) => const SettingsPage(),
       '/account': (context) => const AccountPage(),
       '/history': (context) => const HistoryPage(),
-      '/changelog': (context) => const ChangelogPage(),
       '/qrResult': (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         return QRResultPage(qrCode: args is String ? args : '');
       },
       '/create_user': (context) => const CreateUserPage(),
-      '/all_wines': (context) => const AllWinesPage(),
     };
   }
 }

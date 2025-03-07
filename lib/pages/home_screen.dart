@@ -221,19 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Text('History', style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/history'),
             ),
-            ListTile(
-              leading: Icon(Icons.info, color: theme.colorScheme.onSurface),
-              title: const Text('Changelog',
-                  style: TextStyle(fontFamily: 'SF Pro')),
-              onTap: () => Navigator.pushNamed(context, '/changelog'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.wine_bar),
-              title: const Text('All Wines'),
-              onTap: () {
-                Navigator.of(context).pushNamed('/all_wines');
-              },
-            ),
           ],
         ),
       ),
