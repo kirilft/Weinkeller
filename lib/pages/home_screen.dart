@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:weinkeller/services/database_service.dart';
-import 'package:flutter/services.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
+import 'package:flutter/cupertino.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,34 +48,32 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Manual Entry',
-              style: TextStyle(fontFamily: 'SF Pro')),
-          content: TextField(
-            onChanged: (value) => enteredCode = value,
-            decoration: const InputDecoration(
-              labelText: 'Enter WineID',
-              labelStyle: TextStyle(fontFamily: 'SF Pro'),
+        return CupertinoAlertDialog(
+          title: Text(
+            'Manual Entry',
+            style: TextStyle(fontFamily: 'SF Pro'),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: CupertinoTextField(
+              placeholder: 'Enter WineID',
+              keyboardType: TextInputType.number,
+              onChanged: (value) => enteredCode = value,
+              style: TextStyle(fontFamily: 'SF Pro'),
             ),
-            keyboardType: TextInputType.number,
-            inputFormatters: <TextInputFormatter>[
-              FilteringTextInputFormatter.digitsOnly,
-            ],
           ),
           actions: [
-            TextButton(
+            CupertinoDialogAction(
               onPressed: () => Navigator.of(context).pop(),
-              child:
-                  const Text('Cancel', style: TextStyle(fontFamily: 'SF Pro')),
+              child: Text('Cancel', style: TextStyle(fontFamily: 'SF Pro')),
             ),
-            ElevatedButton(
+            CupertinoDialogAction(
               onPressed: () {
                 Navigator.of(context).pop();
                 Navigator.pushNamed(context, '/qrResult',
                     arguments: enteredCode);
               },
-              style: ElevatedButton.styleFrom(elevation: 0),
-              child: const Text('OK', style: TextStyle(fontFamily: 'SF Pro')),
+              child: Text('OK', style: TextStyle(fontFamily: 'SF Pro')),
             ),
           ],
         );

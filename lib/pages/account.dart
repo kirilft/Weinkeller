@@ -50,12 +50,6 @@ class _AccountPageState extends State<AccountPage> {
   bool _isEditingName = false;
   bool _isEditingEmail = false;
 
-  // Controllers for password change fields.
-  final TextEditingController _oldPasswordController = TextEditingController();
-  final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmNewPasswordController =
-      TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -93,9 +87,6 @@ class _AccountPageState extends State<AccountPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _oldPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmNewPasswordController.dispose();
     super.dispose();
   }
 
@@ -105,43 +96,6 @@ class _AccountPageState extends State<AccountPage> {
     await Future.delayed(const Duration(seconds: 1));
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text("$field updated successfully")));
-  }
-
-  /// Handle password change action.
-  Future<void> _handleChangePassword() async {
-    final oldPass = _oldPasswordController.text;
-    final newPass = _newPasswordController.text;
-    final confirmPass = _confirmNewPasswordController.text;
-
-    // Client-side validation.
-    if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
-      _showErrorDialog(
-          "Validation Error", "Please fill all password fields. :3");
-      return;
-    }
-    if (newPass != confirmPass) {
-      _showErrorDialog("Validation Error", "New passwords do not match. :3");
-      return;
-    }
-
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    try {
-      // Actual password change request.
-      await apiService.changePassword(
-        token: authService.authToken!,
-        oldPassword: oldPass,
-        newPassword: newPass,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password changed successfully")));
-      // Clear password fields upon success.
-      _oldPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmNewPasswordController.clear();
-    } catch (e) {
-      _showErrorDialog("Password Change Error", e.toString());
-    }
   }
 
   /// Handle logout action with confirmation.
@@ -290,37 +244,6 @@ class _AccountPageState extends State<AccountPage> {
                 height: 4,
                 width: double.infinity,
                 color: Colors.grey[300],
-              ),
-              const SizedBox(height: 32),
-              // === Password Change Section ===
-              Text(
-                "Change Password",
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _oldPasswordController,
-                decoration: const InputDecoration(labelText: "Altes Passwort"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _newPasswordController,
-                decoration: const InputDecoration(labelText: "Neues Passwort"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _confirmNewPasswordController,
-                decoration: const InputDecoration(
-                    labelText: "Neues Passwort bestätigen"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _handleChangePassword,
-                child: const Text("Change Password"),
               ),
               const SizedBox(height: 32),
               // === Logout and Delete Account Links ===

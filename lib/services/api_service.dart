@@ -103,48 +103,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> changePassword({
-    required String token,
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    final url = Uri.parse('$baseUrl/Users/Password');
-    final body = {
-      'oldPassword': oldPassword,
-      'newPassword': newPassword,
-    };
-
-    debugPrint('[ApiService] changePassword() - URL: $url');
-    debugPrint('[ApiService] changePassword() - Request body: $body');
-    debugPrint('[ApiService] changePassword() - Token: Bearer $token');
-
-    try {
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      );
-      debugPrint(
-          '[ApiService] changePassword() - Response code: ${response.statusCode}');
-      debugPrint(
-          '[ApiService] changePassword() - Response body: ${response.body}');
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Failed to change password (status ${response.statusCode}): ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('[ApiService] changePassword() - Error: $e');
-      if (e.toString().contains('SocketException')) {
-        throw NoResponseException(
-            'Unable to connect to $url. Check your network.');
-      }
-      rethrow;
-    }
-  }
-
   Future<void> deleteAccount({required String token}) async {
     final url = Uri.parse('$baseUrl/Users');
     debugPrint('[ApiService] deleteAccount() - URL: $url');
