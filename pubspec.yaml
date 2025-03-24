@@ -1,5 +1,5 @@
 name: weinkeller
-description: "A new Flutter project."
+description: "A Flutter App to manage your wine cellar."
 publish_to: 'none'
 version: 1.0.0+11
 
