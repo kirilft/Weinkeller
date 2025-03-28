@@ -4,6 +4,72 @@ import 'package:provider/provider.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:weinkeller/services/auth_service.dart';
 
+const List<Shadow> kTextShadow = [
+  Shadow(
+    offset: Offset(0, 4),
+    blurRadius: 4,
+    color: Color.fromARGB(25, 0, 0, 0),
+  ),
+];
+
+final List<BoxShadow> kBoxShadow = [
+  BoxShadow(
+    offset: Offset(0, 4),
+    blurRadius: 4,
+    color: Colors.black.withAlpha(25),
+  ),
+];
+
+class ShadowedButton extends StatelessWidget {
+  final String label;
+  final Color backgroundColor;
+  final Color textColor;
+  final VoidCallback onPressed;
+  final BorderSide? borderSide;
+
+  const ShadowedButton({
+    Key? key,
+    required this.label,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.onPressed,
+    this.borderSide,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: kBoxShadow,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: backgroundColor,
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 40),
+          shape: RoundedRectangleBorder(
+            side: borderSide ?? BorderSide.none,
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontFamily: 'SFProDisplay',
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            height: 20 / 15,
+            letterSpacing: -0.23,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class CreateUserPage extends StatefulWidget {
   const CreateUserPage({super.key});
 
@@ -12,23 +78,26 @@ class CreateUserPage extends StatefulWidget {
 }
 
 class _CreateUserPageState extends State<CreateUserPage> {
-  // Controllers for the input fields.
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  // Loading state to show a progress indicator during API calls.
   bool _isLoading = false;
 
-  /// Shows an error dialog with the provided [title] and [message].
   void _showErrorDialog(String title, String message) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
+        title: Text(
+          title,
+          style: const TextStyle(shadows: kTextShadow),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(shadows: kTextShadow),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -39,17 +108,12 @@ class _CreateUserPageState extends State<CreateUserPage> {
     );
   }
 
-  /// Handles user registration:
-  /// - Validates input fields.
-  /// - Calls the register API endpoint.
-  /// - Automatically logs in the user on successful registration.
   Future<void> _handleCreateUser() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
-    // Input validation with appropriate error messages.
     if (name.isEmpty) {
       _showErrorDialog("Validation Error", "Name cannot be empty. :3");
       return;
@@ -72,21 +136,17 @@ class _CreateUserPageState extends State<CreateUserPage> {
     });
 
     try {
-      // Retrieve the ApiService and AuthService using Provider.
       final apiService = Provider.of<ApiService>(context, listen: false);
       final authService = Provider.of<AuthService>(context, listen: false);
 
-      // Call the new registerUser method in ApiService.
       await apiService.registerUser(
         username: name,
         email: email,
         password: password,
       );
 
-      // After successful registration, automatically log in to fetch a token.
       final loginSuccess = await authService.login(email, password);
       if (loginSuccess) {
-        // Navigate to home screen after successful registration and login.
         Navigator.pushReplacementNamed(context, '/');
       } else {
         _showErrorDialog("Login Error",
@@ -101,93 +161,96 @@ class _CreateUserPageState extends State<CreateUserPage> {
     }
   }
 
+  PreferredSizeWidget _buildAppBar(ThemeData theme) {
+    return AppBar(
+      title: Text(
+        'Account',
+        style: TextStyle(
+          color: theme.colorScheme.onSurface,
+          fontFamily: 'SFProDisplay',
+          fontSize: 28,
+          fontWeight: FontWeight.w400,
+          height: 34 / 28,
+          letterSpacing: -0.38,
+          shadows: kTextShadow,
+        ),
+      ),
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 32),
+        child: IconButton(
+          icon: FaIcon(
+            FontAwesomeIcons.arrowLeft,
+            size: 32,
+            color: theme.colorScheme.onSurface,
+            shadows: kTextShadow,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 24),
+          child: IconButton(
+            icon: FaIcon(
+              FontAwesomeIcons.gear,
+              size: 32,
+              color: theme.colorScheme.onSurface,
+              shadows: kTextShadow,
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Account',
-          style: TextStyle(
-            color: theme.colorScheme.onSurface,
-            fontFamily: 'SFProDisplay',
-            fontSize: 28,
-            fontStyle: FontStyle.normal,
-            fontWeight: FontWeight.w400,
-            height: 34 / 28,
-            letterSpacing: -0.38,
-          ),
-        ),
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 32),
-          child: IconButton(
-            icon: const Icon(
-              FontAwesomeIcons.arrowLeft,
-              size: 32,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 24),
-            child: IconButton(
-              icon: Icon(
-                FontAwesomeIcons.gear,
-                size: 32,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/settings');
-              },
-            ),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(theme),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(50.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: screenHeight * 0.2),
+            SizedBox(height: screenHeight * 0.15),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(labelText: 'Passwort'),
               obscureText: true,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextField(
               controller: _confirmPasswordController,
               decoration:
                   const InputDecoration(labelText: 'Passwort bestätigen'),
               obscureText: true,
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
               child: _isLoading
                   ? const CircularProgressIndicator()
-                  : ElevatedButton(
+                  : ShadowedButton(
+                      label: 'Erstellen',
+                      backgroundColor: theme.colorScheme.primary,
+                      textColor: theme.colorScheme.onPrimary,
                       onPressed: _handleCreateUser,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 15),
-                      ),
-                      child: const Text('Erstellen'),
                     ),
             ),
           ],
