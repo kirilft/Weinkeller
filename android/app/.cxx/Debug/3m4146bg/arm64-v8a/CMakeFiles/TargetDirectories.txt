@@ -1,0 +1,2 @@
+/Users/kiri/Github/Weinkeller/android/app/.cxx/Debug/3m4146bg/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/kiri/Github/Weinkeller/android/app/.cxx/Debug/3m4146bg/arm64-v8a/CMakeFiles/rebuild_cache.dir
