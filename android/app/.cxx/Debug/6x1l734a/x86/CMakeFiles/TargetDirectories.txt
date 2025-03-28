@@ -1,0 +1,2 @@
+C:/Users/kiriw/Documents/GitHub/Weinkeller/android/app/.cxx/Debug/6x1l734a/x86/CMakeFiles/edit_cache.dir
+C:/Users/kiriw/Documents/GitHub/Weinkeller/android/app/.cxx/Debug/6x1l734a/x86/CMakeFiles/rebuild_cache.dir

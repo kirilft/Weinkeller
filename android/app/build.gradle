@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.yourapp"  // Ensure this matches your namespace
+        applicationId "kasai.tech.weinkeller"  // Ensure this matches your namespace
         minSdkVersion 24
         targetSdkVersion 33
         versionCode = flutter.versionCode
