@@ -66,7 +66,6 @@ class ShadowedButton extends StatelessWidget {
               fontWeight: FontWeight.w400,
               height: 22 / 17,
               letterSpacing: -0.43,
-              shadows: kTextShadow,
             ),
           ),
         ),

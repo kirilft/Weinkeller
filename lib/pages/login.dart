@@ -5,6 +5,72 @@ import 'package:weinkeller/services/auth_service.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+const List<Shadow> kTextShadow = [
+  Shadow(
+    offset: Offset(0, 4),
+    blurRadius: 4,
+    color: Color.fromARGB(25, 0, 0, 0),
+  ),
+];
+
+final List<BoxShadow> kBoxShadow = [
+  BoxShadow(
+    offset: Offset(0, 4),
+    blurRadius: 4,
+    color: Colors.black.withAlpha(25),
+  ),
+];
+
+class ShadowedButton extends StatelessWidget {
+  final String label;
+  final Color backgroundColor;
+  final Color textColor;
+  final VoidCallback onPressed;
+  final BorderSide? borderSide;
+
+  const ShadowedButton({
+    Key? key,
+    required this.label,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.onPressed,
+    this.borderSide,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: kBoxShadow,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: backgroundColor,
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 40),
+          shape: RoundedRectangleBorder(
+            side: borderSide ?? BorderSide.none,
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontFamily: 'SF Pro',
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            height: 20 / 15,
+            letterSpacing: -0.23,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class NoResponseException implements Exception {
   final String message;
   NoResponseException(this.message);
@@ -42,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkBaseUrl(); // Redirect to settings if baseUrl is empty.
+    _checkBaseUrl();
   }
 
   void _showErrorDialog(String title, String message) {
@@ -51,31 +117,13 @@ class _LoginPageState extends State<LoginPage> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(
-            child: Text(message),
+          title: Text(
+            title,
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showFeatureNotAvailableDialog() {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Info'),
-          content: const SingleChildScrollView(
+          content: SingleChildScrollView(
             child: Text(
-                'dieses Feature ist derzeit noch nicht verfügbar. und kann ok drücken un das popup zu schliessen.'),
+              message,
+            ),
           ),
           actions: <Widget>[
             TextButton(
@@ -97,6 +145,8 @@ class _LoginPageState extends State<LoginPage> {
       final success = await authService.login(email, password);
       if (success && authService.isLoggedIn) {
         Navigator.pushReplacementNamed(context, '/');
+      } else {
+        _showErrorDialog('Login Error', 'Das eingegebene Passwort ist falsch.');
       }
     } catch (e) {
       if (e is WrongPasswordException) {
@@ -109,50 +159,58 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  PreferredSizeWidget _buildAppBar(ThemeData theme) {
+    return AppBar(
+      title: Text(
+        'Anmelden',
+        style: TextStyle(
+          color: theme.colorScheme.onSurface,
+          fontFamily: 'SF Pro',
+          fontSize: 28,
+          fontWeight: FontWeight.w400,
+          height: 34 / 28,
+          letterSpacing: -0.38,
+          shadows: kTextShadow,
+        ),
+      ),
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 32),
+        child: IconButton(
+          icon: FaIcon(
+            FontAwesomeIcons.arrowLeft,
+            size: 32,
+            color: theme.colorScheme.onSurface,
+            shadows: kTextShadow,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 32),
+          child: IconButton(
+            icon: FaIcon(
+              FontAwesomeIcons.gear,
+              size: 32,
+              color: theme.colorScheme.onSurface,
+              shadows: kTextShadow,
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Anmelden',
-          style: TextStyle(
-            color: theme.colorScheme.onSurface,
-            fontFamily: 'SF Pro',
-            fontSize: 28,
-            fontStyle: FontStyle.normal,
-            fontWeight: FontWeight.w400,
-            height: 34 / 28,
-            letterSpacing: -0.38,
-          ),
-        ),
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 32),
-          child: IconButton(
-            icon: const Icon(
-              FontAwesomeIcons.arrowLeft,
-              size: 32,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 32),
-            child: IconButton(
-              icon: const Icon(
-                FontAwesomeIcons.gear,
-                size: 32,
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/settings');
-              },
-            ),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(theme),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(50.0),
         child: Column(
@@ -169,50 +227,14 @@ class _LoginPageState extends State<LoginPage> {
               decoration: const InputDecoration(labelText: 'Passwort'),
               obscureText: true,
             ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _showFeatureNotAvailableDialog,
-                icon: const Icon(Icons.link, size: 16),
-                label: Text(
-                  'Passwort vergessen?',
-                  style: TextStyle(
-                    color: AppColors.blue,
-                    fontFamily: 'SF Pro',
-                    fontSize: 13,
-                    fontStyle: FontStyle.normal,
-                    fontWeight: FontWeight.w400,
-                    height: 18 / 13,
-                    letterSpacing: -0.08,
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
-              child: ElevatedButton(
+              child: ShadowedButton(
+                label: 'Anmelden',
+                backgroundColor: theme.colorScheme.primary,
+                textColor: theme.colorScheme.onPrimary,
                 onPressed: _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 15,
-                  ),
-                ),
-                child: Text(
-                  'Anmelden',
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimary,
-                    fontFamily: 'SF Pro',
-                    fontSize: 15,
-                    fontStyle: FontStyle.normal,
-                    fontWeight: FontWeight.w400,
-                    height: 20 / 15,
-                    letterSpacing: -0.23,
-                  ),
-                ),
               ),
             ),
           ],
