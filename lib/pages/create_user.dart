@@ -28,13 +28,13 @@ class ShadowedButton extends StatelessWidget {
   final BorderSide? borderSide;
 
   const ShadowedButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.backgroundColor,
     required this.textColor,
     required this.onPressed,
     this.borderSide,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

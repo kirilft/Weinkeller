@@ -49,8 +49,8 @@ class ApiService extends ChangeNotifier {
   /// Constructor requires an initial base URL.
   ApiService({required String baseUrl}) : _baseUrl = baseUrl;
 
-  // A static cache for wine names
-  static Map<int, String> wineNameCache = {};
+  // Updated static cache for wine names using String keys.
+  static Map<String, String> wineNameCache = {};
 
   // ==========================================================================
   // ========== USERS ==========
@@ -338,11 +338,12 @@ class ApiService extends ChangeNotifier {
   // ========== FERMENTATION ENTRIES ==========
   // ==========================================================================
 
+  // Updated parameter type for wineId: now a String
   Future<void> addFermentationEntry({
     required String token,
     required DateTime date,
     required double density,
-    required int wineId,
+    required String wineId,
   }) async {
     debugPrint('[ApiService] addFermentationEntry() called');
     await _addFermentationEntryNew(
@@ -436,11 +437,12 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  // Updated parameter type for wineId: now a String
   Future<void> _addFermentationEntryNew({
     required String token,
     required DateTime date,
     required double density,
-    required int wineId,
+    required String wineId,
   }) async {
     final url = Uri.parse('$baseUrl/FermentationEntries');
     final body = {
@@ -492,10 +494,11 @@ class ApiService extends ChangeNotifier {
   // ========== WINES ==========
   // ==========================================================================
 
-  Future<List<Map<String, dynamic>>> getAllWineNames(
+  // Updated: Using String as wineId in cache & for wine types
+  Future<List<Map<String, dynamic>>> getAllWineTypes(
       {required String token}) async {
-    final url = Uri.parse('$baseUrl/Wines');
-    debugPrint('[ApiService] getAllWineNames() - URL: $url');
+    final url = Uri.parse('$baseUrl/WineTypes');
+    debugPrint('[ApiService] getAllWineTypes() - URL: $url');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -503,24 +506,24 @@ class ApiService extends ChangeNotifier {
     try {
       final response = await http.get(url, headers: headers);
       debugPrint(
-          '[ApiService] getAllWineNames() - Response code: ${response.statusCode}');
+          '[ApiService] getAllWineTypes() - Response code: ${response.statusCode}');
       debugPrint(
-          '[ApiService] getAllWineNames() - Response body: ${response.body}');
+          '[ApiService] getAllWineTypes() - Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
-        // Update the local cache
+        // Update the local cache using String keys
         for (var item in data) {
-          int wineId = item['id'];
+          String wineId = item['id'];
           String wineName = item['name'] ?? 'Unknown Wine';
           wineNameCache[wineId] = wineName;
         }
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
         throw Exception(
-            'Failed to retrieve wine names (status ${response.statusCode}): ${response.body}');
+            'Failed to retrieve wine types (status ${response.statusCode}): ${response.body}');
       }
     } catch (e) {
-      debugPrint('[ApiService] getAllWineNames() - Error: $e');
+      debugPrint('[ApiService] getAllWineTypes() - Error: $e');
       if (e.toString().contains('SocketException')) {
         throw NoResponseException('Unable to connect to $url.');
       }
@@ -528,7 +531,8 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getWineById(int id,
+  // Updated parameter type: id is now a String
+  Future<Map<String, dynamic>> getWineById(String id,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] getWineById() - URL: $url');
@@ -547,8 +551,8 @@ class ApiService extends ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         Map<String, dynamic> wine =
             jsonDecode(response.body) as Map<String, dynamic>;
-        // Update the local cache
-        int wineId = wine['id'];
+        // Update the local cache using String keys
+        String wineId = wine['id'];
         String wineName = wine['name'] ?? 'Unknown Wine';
         wineNameCache[wineId] = wineName;
         return wine;
@@ -597,7 +601,8 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> updateWine(int id, Map<String, dynamic> wine,
+  // Updated: id is now a String
+  Future<void> updateWine(String id, Map<String, dynamic> wine,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] updateWine() - URL: $url');
@@ -627,7 +632,8 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteWine(int id, {required String token}) async {
+  // Updated: id is now a String
+  Future<void> deleteWine(String id, {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$id');
     debugPrint('[ApiService] deleteWine() - URL: $url');
     final headers = {
@@ -651,7 +657,7 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getWineAdditives(int wineId,
+  Future<List<Map<String, dynamic>>> getWineAdditives(String wineId,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/Additives');
     debugPrint('[ApiService] getWineAdditives() - URL: $url');
@@ -681,7 +687,7 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getWineFermentationEntries(int wineId,
+  Future<List<Map<String, dynamic>>> getWineFermentationEntries(String wineId,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/FermentationEntries');
     debugPrint('[ApiService] getWineFermentationEntries() - URL: $url');
@@ -711,7 +717,7 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getMostTreatment(int wineId,
+  Future<Map<String, dynamic>> getMostTreatment(String wineId,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] getMostTreatment() - URL: $url');
@@ -741,7 +747,7 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<void> updateMostTreatment(
-      int wineId, Map<String, dynamic> treatmentData,
+      String wineId, Map<String, dynamic> treatmentData,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] updateMostTreatment() - URL: $url');
@@ -775,7 +781,7 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> createMostTreatment(
-      int wineId, Map<String, dynamic> treatmentData,
+      String wineId, Map<String, dynamic> treatmentData,
       {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] createMostTreatment() - URL: $url');
@@ -810,7 +816,8 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteMostTreatment(int wineId, {required String token}) async {
+  Future<void> deleteMostTreatment(String wineId,
+      {required String token}) async {
     final url = Uri.parse('$baseUrl/Wines/$wineId/MostTreatment');
     debugPrint('[ApiService] deleteMostTreatment() - URL: $url');
     final headers = {
@@ -879,20 +886,61 @@ class ApiService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Forces an update of the wine cache by calling getAllWineNames.
+  /// Forces an update of the wine cache by calling getAllWineTypes.
   /// If nothing changes in the cache, it logs that the cache did not change.
   Future<void> updateCache({required String token}) async {
     // Make a copy of the current cache.
-    final Map<int, String> oldCache = Map<int, String>.from(wineNameCache);
+    final Map<String, String> oldCache =
+        Map<String, String>.from(wineNameCache);
 
-    // Update the cache by calling getAllWineNames.
-    await getAllWineNames(token: token);
+    // Update the cache by calling getAllWineTypes.
+    await getAllWineTypes(token: token);
 
     // Compare the old and new caches.
     if (mapEquals(oldCache, wineNameCache)) {
       debugPrint('[ApiService] updateCache() - Cache did not change.');
     } else {
       debugPrint('[ApiService] updateCache() - Cache updated successfully.');
+    }
+  }
+
+  // ==========================================================================
+  // ========== BACKGROUND SYNC ==========
+  // ==========================================================================
+
+  /// Attempts to synchronize pending fermentation entries stored locally.
+  Future<void> syncPendingFermentationEntries({required String token}) async {
+    final pendingEntries = await _databaseService.getPendingEntries();
+    for (final entry in pendingEntries) {
+      try {
+        final url = Uri.parse('$baseUrl/FermentationEntries');
+        final response = await http
+            .post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                'date': entry['date'],
+                'density': entry['density'],
+                'wineId': entry['wineId'],
+              }),
+            )
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          await _databaseService.deletePendingEntry(entry['id']);
+          debugPrint(
+              '[ApiService] Sync: Entry ${entry['id']} synced successfully.');
+        } else {
+          debugPrint(
+              '[ApiService] Sync: Failed to sync entry ${entry['id']}: ${response.body}');
+        }
+      } catch (e) {
+        debugPrint('[ApiService] Sync: Error syncing entry ${entry['id']}: $e');
+        // Break the loop if a network issue is detected to avoid rapid retries.
+        break;
+      }
     }
   }
 }

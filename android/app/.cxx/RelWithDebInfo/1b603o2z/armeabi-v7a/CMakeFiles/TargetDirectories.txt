@@ -1,0 +1,2 @@
+/Users/kiri/Github/Weinkeller/android/app/.cxx/RelWithDebInfo/1b603o2z/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/kiri/Github/Weinkeller/android/app/.cxx/RelWithDebInfo/1b603o2z/armeabi-v7a/CMakeFiles/rebuild_cache.dir

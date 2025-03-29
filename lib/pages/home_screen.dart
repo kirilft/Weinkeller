@@ -6,6 +6,9 @@ import 'package:weinkeller/services/database_service.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart'; // NEW: For accessing ApiService and AuthService
+import 'package:weinkeller/services/api_service.dart'; // NEW
+import 'package:weinkeller/services/auth_service.dart'; // NEW
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,39 +46,62 @@ class _HomeScreenState extends State<HomeScreen> {
     _randomGreeting = _greetings[randomIndex];
   }
 
-  void _showManualCodeDialog() {
-    String enteredCode = '';
-    showDialog(
+  /// NEW: Fetch wines from the API using Provider.
+  Future<List<Map<String, dynamic>>> _fetchWines() async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.authToken;
+    if (token != null && token.isNotEmpty) {
+      return await apiService.getAllWineTypes(token: token);
+    } else {
+      return [];
+    }
+  }
+
+  /// NEW: Show a bottom sheet allowing the user to manually select a wine from a list.
+  void _showManualSelectDialog() {
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return CupertinoAlertDialog(
-          title: Text(
-            'Manual Entry',
-            style: TextStyle(fontFamily: 'SF Pro'),
-          ),
-          content: Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: CupertinoTextField(
-              placeholder: 'Enter WineID',
-              keyboardType: TextInputType.number,
-              onChanged: (value) => enteredCode = value,
-              style: TextStyle(fontFamily: 'SF Pro'),
-            ),
-          ),
-          actions: [
-            CupertinoDialogAction(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel', style: TextStyle(fontFamily: 'SF Pro')),
-            ),
-            CupertinoDialogAction(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/qrResult',
-                    arguments: enteredCode);
-              },
-              child: Text('OK', style: TextStyle(fontFamily: 'SF Pro')),
-            ),
-          ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: _fetchWines(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error loading wines'));
+            }
+            final wines = snapshot.data ?? [];
+            return Container(
+              constraints: const BoxConstraints(maxHeight: 414),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(54)),
+              ),
+              child: ListView.separated(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                itemCount: wines.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final wine = wines[index];
+                  final wineName = wine['name'] ?? 'Unknown Wine';
+                  return ListTile(
+                    title: Text(wineName,
+                        style: const TextStyle(fontFamily: 'SF Pro')),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/qrResult',
+                          arguments: wine['id'].toString());
+                    },
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
@@ -253,7 +279,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _showManualCodeDialog,
+                        onPressed:
+                            _showManualSelectDialog, // NEW: Changed to manual selection dialog
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
                           backgroundColor: const Color(0xFFEFEFF0),
@@ -271,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         child: Text(
-                          'Manuell Code eingeben',
+                          'Manuell auswehlen', // NEW: Updated text
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontFamily: 'SF Pro',
@@ -333,7 +360,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         tooltip: 'Open Menu',
                       ),
                       ElevatedButton(
-                        onPressed: _showManualCodeDialog,
+                        onPressed:
+                            _showManualSelectDialog, // NEW: Also allow manual selection from here if needed
                         style: ElevatedButton.styleFrom(
                           shape: const CircleBorder(),
                           padding: const EdgeInsets.all(18),

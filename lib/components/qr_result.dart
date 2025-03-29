@@ -58,14 +58,14 @@ class _QRResultPageState extends State<QRResultPage> {
     super.dispose();
   }
 
-  /// Updates the local cache of wine names by calling getAllWineNames.
+  /// Updates the local cache of wine names by calling getAllWineTypes.
   Future<void> _updateWineCache() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final token = authService.authToken;
     if (token == null || token.isEmpty) return;
     final apiService = Provider.of<ApiService>(context, listen: false);
     try {
-      await apiService.getAllWineNames(token: token);
+      await apiService.getAllWineTypes(token: token);
     } catch (e) {
       debugPrint('Error updating wine cache: $e');
       // Optionally handle the error.
@@ -82,8 +82,9 @@ class _QRResultPageState extends State<QRResultPage> {
       });
       return;
     }
-    final wineId = int.tryParse(widget.qrCode);
-    if (wineId == null) {
+    // Use widget.qrCode directly as wineId (String)
+    final String wineId = widget.qrCode;
+    if (wineId.isEmpty) {
       _showErrorDialog('QR Code Error', 'Invalid QR Code for wine ID.');
       return;
     }
@@ -186,11 +187,9 @@ class _QRResultPageState extends State<QRResultPage> {
       }
     }
 
-    // Convert QR code to wineId.
-    int wineId;
-    try {
-      wineId = int.parse(widget.qrCode);
-    } catch (_) {
+    // Use widget.qrCode directly as wineId (String)
+    final String wineId = widget.qrCode;
+    if (wineId.isEmpty) {
       _showErrorDialog('QR Code Error', 'Invalid QR Code for wine ID.');
       return;
     }

@@ -10,6 +10,7 @@ import 'config/app_colors.dart';
 import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/sync_service.dart'; // NEW: Import the sync service
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -33,6 +34,9 @@ Future<void> main() async {
           ChangeNotifierProvider<ApiService>(create: (_) => apiService),
           ChangeNotifierProvider<AuthService>(create: (_) => authService),
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider<SyncService>(
+              create: (_) => SyncService(
+                  apiService: apiService)), // NEW: SyncService provider
         ],
         // Wrap the app in CacheInitializer to update wine cache on launch.
         child: const CacheInitializer(
@@ -45,7 +49,8 @@ Future<void> main() async {
   });
 }
 
-/// A top-level widget that updates (forces) the wine cache when the app launches.
+/// A top-level widget that updates (forces) the wine cache when the app launches
+/// and starts the background synchronization service.
 class CacheInitializer extends StatefulWidget {
   final Widget child;
   const CacheInitializer({super.key, required this.child});
@@ -65,20 +70,25 @@ class _CacheInitializerState extends State<CacheInitializer> {
   }
 
   Future<void> _updateCache() async {
-    // Retrieve AuthService and ApiService from Provider.
+    // Retrieve AuthService, ApiService and SyncService from Provider.
     final authService = Provider.of<AuthService>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
+    final syncService = Provider.of<SyncService>(context, listen: false);
     final token = authService.authToken;
     if (token != null && token.isNotEmpty) {
       try {
         // Force update the cache by calling updateCache.
         await apiService.updateCache(token: token);
         debugPrint('Wine cache successfully updated on app launch.');
+        // Start the synchronization service.
+        syncService.startSync(token);
+        debugPrint('Sync service started with token.');
       } catch (e) {
         debugPrint('Error updating wine cache on app launch: $e');
       }
     } else {
-      debugPrint('No token available on app launch; skipping cache update.');
+      debugPrint(
+          'No token available on app launch; skipping cache update and sync.');
     }
   }
 
