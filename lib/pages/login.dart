@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/services/auth_service.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

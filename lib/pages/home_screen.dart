@@ -5,7 +5,6 @@ import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:weinkeller/services/database_service.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart'; // NEW: For accessing ApiService and AuthService
 import 'package:weinkeller/services/api_service.dart'; // NEW
 import 'package:weinkeller/services/auth_service.dart'; // NEW
