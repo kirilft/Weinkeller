@@ -239,6 +239,13 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => Navigator.pushNamed(context, '/settings'),
             ),
             ListTile(
+              leading: FaIcon(FontAwesomeIcons.cloud,
+                  color: theme.colorScheme.onSurface),
+              title:
+                  const Text('Web UI', style: TextStyle(fontFamily: 'SF Pro')),
+              onTap: () => Navigator.pushNamed(context, '/webui'),
+            ),
+            ListTile(
               leading: Icon(Icons.history, color: theme.colorScheme.onSurface),
               title:
                   const Text('History', style: TextStyle(fontFamily: 'SF Pro')),

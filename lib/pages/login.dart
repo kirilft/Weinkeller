@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:weinkeller/services/auth_service.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/services.dart';
 
 const List<Shadow> kTextShadow = [
   Shadow(
@@ -143,6 +144,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final success = await authService.login(email, password);
       if (success && authService.isLoggedIn) {
+        HapticFeedback.lightImpact();
         Navigator.pushReplacementNamed(context, '/');
       } else {
         _showErrorDialog('Login Error', 'Das eingegebene Passwort ist falsch.');
@@ -216,15 +218,24 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: screenHeight * 0.2),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Passwort'),
-              obscureText: true,
+            AutofillGroup(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _emailController,
+                    autofillHints: const [AutofillHints.email],
+                    decoration: const InputDecoration(labelText: 'Email'),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _passwordController,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: const InputDecoration(labelText: 'Passwort'),
+                    obscureText: true,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             Align(

@@ -10,6 +10,7 @@ import '../pages/account.dart';
 import '../pages/history.dart';
 import '../components/qr_result.dart';
 import '../pages/create_user.dart';
+import '../pages/web_ui.dart';
 
 class AppRoutes {
   static const String initialRoute = '/';
@@ -27,6 +28,7 @@ class AppRoutes {
       '/settings': (context) => const SettingsPage(),
       '/account': (context) => const AccountPage(),
       '/history': (context) => const HistoryPage(),
+      '/webui': (context) => const WebUIView(),
       '/qrResult': (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         return QRResultPage(qrCode: args is String ? args : '');

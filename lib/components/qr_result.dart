@@ -46,6 +46,7 @@ class _QRResultPageState extends State<QRResultPage> {
   @override
   void initState() {
     super.initState();
+    HapticFeedback.lightImpact(); // Haptic feedback on page open
     // Update the local cache for fresh data on page open.
     _updateWineCache();
     _fetchWineName();
@@ -247,6 +248,7 @@ class _QRResultPageState extends State<QRResultPage> {
       for (var payload in additivePayloads) {
         await apiService.createAdditive(payload, token: token);
       }
+      HapticFeedback.heavyImpact();
       _showSuccessSnackbar('Entry added successfully!');
     } catch (e) {
       debugPrint('[QRResultPage] _submitData() - Error: $e');
