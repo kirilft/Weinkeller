@@ -1,4 +1,3 @@
-// For FontFeature
 import 'dart:io'; // For SocketException
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,22 +14,22 @@ class _AdditiveEntry {
   _AdditiveEntry();
 }
 
-class QRResultPage extends StatefulWidget {
-  static const routeName = '/qrResult';
+class EntryDetailsPage extends StatefulWidget {
+  static const routeName = '/entryDetails';
 
-  final String qrCode;
+  final String entryId;
 
-  const QRResultPage({super.key, required this.qrCode});
+  const EntryDetailsPage({super.key, required this.entryId});
 
   @override
-  State<QRResultPage> createState() => _QRResultPageState();
+  State<EntryDetailsPage> createState() => _EntryDetailsPageState();
 }
 
-class _QRResultPageState extends State<QRResultPage> {
+class _EntryDetailsPageState extends State<EntryDetailsPage> {
   final TextEditingController _densityController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSubmitting = false;
-  String _wineName = '';
+  String _entryName = '';
 
   // List to hold additive entries; starts with one empty entry.
   final List<_AdditiveEntry> _additiveEntries = [_AdditiveEntry()];
@@ -47,9 +46,7 @@ class _QRResultPageState extends State<QRResultPage> {
   void initState() {
     super.initState();
     HapticFeedback.lightImpact(); // Haptic feedback on page open
-    // Update the local cache for fresh data on page open.
-    _updateWineCache();
-    _fetchWineName();
+    _fetchEntryName();
   }
 
   @override
@@ -59,75 +56,51 @@ class _QRResultPageState extends State<QRResultPage> {
     super.dispose();
   }
 
-  /// Updates the local cache of wine names by calling getAllWineTypes.
-  Future<void> _updateWineCache() async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final token = authService.authToken;
-    if (token == null || token.isEmpty) return;
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    try {
-      await apiService.getAllWineTypes(token: token);
-    } catch (e) {
-      debugPrint('Error updating wine cache: $e');
-      // Optionally handle the error.
-    }
-  }
-
-  /// Fetches the wine name using local cache first, then the API.
-  Future<void> _fetchWineName() async {
+  /// Fetches the entry name using the API.
+  /// Expects the provided entryId to be convertible to an integer.
+  Future<void> _fetchEntryName() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final token = authService.authToken;
     if (token == null || token.isEmpty) {
       setState(() {
-        _wineName = 'Unknown Wine';
+        _entryName = 'Unknown';
       });
       return;
     }
-    // Use widget.qrCode directly as wineId (String)
-    final String wineId = widget.qrCode;
-    if (wineId.isEmpty) {
-      _showErrorDialog('QR Code Error', 'Invalid QR Code for wine ID.');
-      return;
-    }
-    // Check if the wine name is already cached.
-    final cachedName = ApiService.wineNameCache[wineId];
-    if (cachedName != null) {
-      setState(() {
-        _wineName = cachedName;
-      });
+    // Convert the provided entryId string to int.
+    final int? parsedId = int.tryParse(widget.entryId);
+    if (parsedId == null || parsedId == 0) {
+      _showErrorDialog('Entry ID Error', 'Invalid Entry ID provided.');
       return;
     }
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
-      final result = await apiService.getWineById(wineId, token: token);
-      final String wineName = result['name'] ?? 'Unknown Wine';
-      // Update the cache.
-      ApiService.wineNameCache[wineId] = wineName;
+      final result =
+          await apiService.getFermentationEntry(parsedId, token: token);
+      final String entryName = result['name'] ?? 'Unknown';
       setState(() {
-        _wineName = wineName;
+        _entryName = entryName;
       });
     } on SocketException catch (e) {
-      debugPrint('[QRResultPage] _fetchWineName() - Offline Error: $e');
+      debugPrint('[EntryDetailsPage] _fetchEntryName() - Offline Error: $e');
       final continueOffline = await _showOfflineDialog();
       if (continueOffline) {
         setState(() {
-          _wineName = cachedName ?? 'Unknown Wine';
+          _entryName = 'Unknown';
         });
       }
     } catch (e) {
-      debugPrint('[QRResultPage] _fetchWineName() - Error: $e');
+      debugPrint('[EntryDetailsPage] _fetchEntryName() - Error: $e');
       if (e.toString().contains('401')) {
-        // Navigate back to home and show the access denied message.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.of(context).popUntil((route) => route.isFirst);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('You do not have access to this wine')),
+            const SnackBar(content: Text('Access denied to this entry')),
           );
         });
       } else {
         setState(() {
-          _wineName = 'Unknown Wine';
+          _entryName = 'Unknown';
         });
       }
     }
@@ -156,11 +129,7 @@ class _QRResultPageState extends State<QRResultPage> {
         false;
   }
 
-  /// Submits the fermentation entry and/or additives.
-  ///
-  /// If a density is provided, a fermentation entry is created. Additionally,
-  /// for every additive selected with an entered amount, a separate API call is made
-  /// using [apiService.createAdditive]. At least one of these must be provided.
+  /// Submits the entry data and/or additives.
   Future<void> _submitData() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final apiService = Provider.of<ApiService>(context, listen: false);
@@ -176,7 +145,6 @@ class _QRResultPageState extends State<QRResultPage> {
       return;
     }
 
-    // Parse density if provided.
     double? density;
     if (densityInput.isNotEmpty) {
       try {
@@ -188,14 +156,12 @@ class _QRResultPageState extends State<QRResultPage> {
       }
     }
 
-    // Use widget.qrCode directly as wineId (String)
-    final String wineId = widget.qrCode;
-    if (wineId.isEmpty) {
-      _showErrorDialog('QR Code Error', 'Invalid QR Code for wine ID.');
+    final String entryId = widget.entryId;
+    if (entryId.isEmpty) {
+      _showErrorDialog('Entry ID Error', 'Invalid Entry ID provided.');
       return;
     }
 
-    // Gather additive entries from the form.
     List<Map<String, dynamic>> additivePayloads = [];
     for (var entry in _additiveEntries) {
       if (entry.selectedAdditive != null &&
@@ -217,14 +183,12 @@ class _QRResultPageState extends State<QRResultPage> {
           'type': entry.selectedAdditive,
           'date':
               DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(DateTime.now()),
-          // For simplicity, we use the "amountGrammsPerLitre" field.
           'amountGrammsPerLitre': additiveAmount,
-          'wineId': wineId,
+          'entryId': entryId,
         });
       }
     }
 
-    // At least one of density or additives must be provided.
     if (density == null && additivePayloads.isEmpty) {
       _showErrorDialog('Validation Error',
           'Please enter a density value or add at least one additive.');
@@ -235,30 +199,26 @@ class _QRResultPageState extends State<QRResultPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // If density is provided, submit the fermentation entry.
       if (density != null) {
         await apiService.addFermentationEntry(
           token: token,
           date: date,
           density: density,
-          wineId: wineId,
+          wineId: entryId, // Reusing the same field name for consistency.
         );
       }
-      // For every additive provided, create an additive entry.
       for (var payload in additivePayloads) {
         await apiService.createAdditive(payload, token: token);
       }
       HapticFeedback.heavyImpact();
       _showSuccessSnackbar('Entry added successfully!');
     } catch (e) {
-      debugPrint('[QRResultPage] _submitData() - Error: $e');
+      debugPrint('[EntryDetailsPage] _submitData() - Error: $e');
       if (e.toString().contains('401')) {
-        // Navigate back to home and show the access denied message.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.of(context).popUntil((route) => route.isFirst);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('You do not have access to this wine')),
+            const SnackBar(content: Text('Access denied to this entry')),
           );
         });
       } else {
@@ -270,11 +230,8 @@ class _QRResultPageState extends State<QRResultPage> {
   }
 
   /// Displays an error dialog.
-  void _showErrorDialog(
-    String title,
-    String message, {
-    bool showLoginButton = false,
-  }) {
+  void _showErrorDialog(String title, String message,
+      {bool showLoginButton = false}) {
     showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -285,9 +242,8 @@ class _QRResultPageState extends State<QRResultPage> {
             if (showLoginButton)
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog.
-                  Navigator.of(context)
-                      .pushNamed('/login'); // Navigate to login.
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pushNamed('/login');
                 },
                 child: const Text('Login'),
               ),
@@ -301,7 +257,7 @@ class _QRResultPageState extends State<QRResultPage> {
     );
   }
 
-  /// Displays a success snackbar and navigates quickly to the main page.
+  /// Displays a success snackbar and navigates to the main page.
   void _showSuccessSnackbar(String message) {
     final snackBar = SnackBar(
       content: Text(message),
@@ -331,7 +287,6 @@ class _QRResultPageState extends State<QRResultPage> {
           onChanged: (value) {
             setState(() {
               _additiveEntries[index].selectedAdditive = value;
-              // If an additive is selected in the last row, append a new empty row.
               if (value != null && index == _additiveEntries.length - 1) {
                 _additiveEntries.add(_AdditiveEntry());
               }
@@ -362,7 +317,6 @@ class _QRResultPageState extends State<QRResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Set the system overlay style so that iOS status bar icons are dark.
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle.dark,
@@ -374,7 +328,7 @@ class _QRResultPageState extends State<QRResultPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Wein',
+          'Entry Details',
           style: TextStyle(fontFamily: 'SF Pro'),
         ),
       ),
@@ -390,12 +344,12 @@ class _QRResultPageState extends State<QRResultPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Scanned WineID: ${widget.qrCode}',
+                  'Scanned Entry ID: ${widget.entryId}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  _wineName.isEmpty ? 'Loading...' : _wineName,
+                  _entryName.isEmpty ? 'Loading...' : _entryName,
                   style: const TextStyle(
                     color: Color(0xFF000000),
                     fontFamily: 'SF Pro',

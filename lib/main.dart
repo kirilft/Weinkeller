@@ -10,36 +10,43 @@ import 'config/app_colors.dart';
 import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
-import 'services/sync_service.dart'; // NEW: Import the sync service
+import 'services/sync_service.dart';
+import 'services/database_service.dart'; // Added DatabaseService
 
 Future<void> main() async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize secure storage
+    // Initialize secure storage.
     const secureStorage = FlutterSecureStorage();
 
-    // Attempt to read baseUrl from secure storage; fallback to a default if none is found
+    // Attempt to read baseUrl from secure storage; fallback to an empty string if none is found.
     final savedBaseUrl = await secureStorage.read(key: 'baseUrl') ?? '';
 
-    // Create the ApiService with the base URL
+    // Create the ApiService with the base URL.
     final apiService = ApiService(baseUrl: savedBaseUrl);
 
-    // Create the AuthService with the ApiService
+    // Create the AuthService with the ApiService.
     final authService = AuthService(apiService: apiService);
+
+    // Create the DatabaseService (singleton).
+    final databaseService = DatabaseService();
 
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider<ApiService>(create: (_) => apiService),
           ChangeNotifierProvider<AuthService>(create: (_) => authService),
+          Provider<DatabaseService>(create: (_) => databaseService),
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
           ChangeNotifierProvider<SyncService>(
               create: (_) => SyncService(
-                  apiService: apiService)), // NEW: SyncService provider
+                    apiService: apiService,
+                    databaseService: databaseService,
+                  )),
         ],
-        // Wrap the app in CacheInitializer to update wine cache on launch.
-        child: const CacheInitializer(
+        // Wrap the app in AppInitializer to perform initial checks.
+        child: const AppInitializer(
           child: MyWeinkellerApp(),
         ),
       ),
@@ -49,47 +56,24 @@ Future<void> main() async {
   });
 }
 
-/// A top-level widget that updates (forces) the wine cache when the app launches
-/// and starts the background synchronization service.
-class CacheInitializer extends StatefulWidget {
+/// A top-level widget that initializes the app state by invoking AuthService.initialize().
+class AppInitializer extends StatefulWidget {
   final Widget child;
-  const CacheInitializer({super.key, required this.child});
+  const AppInitializer({Key? key, required this.child}) : super(key: key);
 
   @override
-  _CacheInitializerState createState() => _CacheInitializerState();
+  _AppInitializerState createState() => _AppInitializerState();
 }
 
-class _CacheInitializerState extends State<CacheInitializer> {
+class _AppInitializerState extends State<AppInitializer> {
   @override
   void initState() {
     super.initState();
-    // Delay the cache update until after the first frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateCache();
+    // Perform initialization after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.initialize(context);
     });
-  }
-
-  Future<void> _updateCache() async {
-    // Retrieve AuthService, ApiService and SyncService from Provider.
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    final syncService = Provider.of<SyncService>(context, listen: false);
-    final token = authService.authToken;
-    if (token != null && token.isNotEmpty) {
-      try {
-        // Force update the cache by calling updateCache.
-        await apiService.updateCache(token: token);
-        debugPrint('Wine cache successfully updated on app launch.');
-        // Start the synchronization service.
-        syncService.startSync(token);
-        debugPrint('Sync service started with token.');
-      } catch (e) {
-        debugPrint('Error updating wine cache on app launch: $e');
-      }
-    } else {
-      debugPrint(
-          'No token available on app launch; skipping cache update and sync.');
-    }
   }
 
   @override
@@ -99,7 +83,7 @@ class _CacheInitializerState extends State<CacheInitializer> {
 }
 
 class MyWeinkellerApp extends StatefulWidget {
-  const MyWeinkellerApp({super.key});
+  const MyWeinkellerApp({Key? key}) : super(key: key);
 
   @override
   _MyWeinkellerAppState createState() => _MyWeinkellerAppState();
@@ -166,15 +150,15 @@ class _MyWeinkellerAppState extends State<MyWeinkellerApp> {
   }
 }
 
-/// Widget to notify locale changes
+/// Widget to notify locale changes.
 class LanguageChangeNotifier extends InheritedWidget {
   final Function(Locale) onLocaleChanged;
 
   const LanguageChangeNotifier({
-    super.key,
+    Key? key,
     required this.onLocaleChanged,
-    required super.child,
-  });
+    required Widget child,
+  }) : super(key: key, child: child);
 
   static LanguageChangeNotifier? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<LanguageChangeNotifier>();

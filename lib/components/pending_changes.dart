@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:weinkeller/services/database_service.dart';
-// For disabling ligatures
+import 'dart:ui'; // for FontFeature
 
 class PendingChanges extends StatefulWidget {
-  /// Callback to notify HomeScreen that pending entries changed
+  /// Callback to notify HomeScreen that pending operations changed.
   final VoidCallback? onChangesUpdated;
 
   const PendingChanges({super.key, this.onChangesUpdated});
@@ -14,18 +14,14 @@ class PendingChanges extends StatefulWidget {
   State<PendingChanges> createState() => _PendingChangesState();
 }
 
-// Reusable text styles (SF Pro) with specified letter spacing, line heights, etc.
 const _title1Style = TextStyle(
   color: Color(0xFF000000),
   fontFamily: 'SF Pro',
   fontSize: 28,
   fontStyle: FontStyle.normal,
   fontWeight: FontWeight.w400,
-  // line-height: 34 px => 34 / 28 = ~1.2143
   height: 34 / 28,
-  // letter-spacing: 0.38 px
   letterSpacing: 0.38,
-  // disable ligatures
   fontFeatures: [
     FontFeature.disable('liga'),
     FontFeature.disable('clig'),
@@ -38,9 +34,7 @@ const _footnoteStyle = TextStyle(
   fontSize: 13,
   fontStyle: FontStyle.normal,
   fontWeight: FontWeight.w400,
-  // line-height: 18 px => 18 / 13 = ~1.3846
   height: 18 / 13,
-  // letter-spacing: -0.08 px
   letterSpacing: -0.08,
   fontFeatures: [
     FontFeature.disable('liga'),
@@ -49,60 +43,54 @@ const _footnoteStyle = TextStyle(
 );
 
 class _PendingChangesState extends State<PendingChanges> {
-  late Future<List<Map<String, dynamic>>> _pendingEntriesFuture;
-  List<Map<String, dynamic>> _entries = [];
+  late Future<List<Map<String, dynamic>>> _pendingOperationsFuture;
+  List<Map<String, dynamic>> _operations = [];
 
   @override
   void initState() {
     super.initState();
-    _loadPendingEntries();
+    _loadPendingOperations();
   }
 
-  void _loadPendingEntries() {
-    _pendingEntriesFuture = DatabaseService().getPendingEntries();
+  void _loadPendingOperations() {
+    _pendingOperationsFuture = DatabaseService().getPendingOperations();
   }
 
-  /// Deletes *all* pending entries
-  Future<void> _deleteAllEntries() async {
+  /// Deletes all pending operations.
+  Future<void> _deleteAllOperations() async {
     try {
-      await DatabaseService().deleteAllPendingEntries();
+      await DatabaseService().deleteAllPendingOperations();
     } catch (e) {
-      debugPrint('Error deleting all entries: $e');
+      debugPrint('Error deleting all operations: $e');
     } finally {
-      // Notify parent screen
       widget.onChangesUpdated?.call();
-
-      _loadPendingEntries();
+      _loadPendingOperations();
       setState(() {});
     }
   }
 
-  /// Deletes a single entry by ID
-  Future<void> _deleteSingleEntry(int entryId) async {
+  /// Deletes a single operation by its ID.
+  Future<void> _deleteSingleOperation(int operationId) async {
     try {
-      await DatabaseService().deletePendingEntry(entryId);
+      await DatabaseService().deletePendingOperation(operationId);
     } catch (e) {
-      debugPrint('Error deleting entry $entryId: $e');
+      debugPrint('Error deleting operation $operationId: $e');
     } finally {
-      // Notify parent screen
       widget.onChangesUpdated?.call();
-
-      _loadPendingEntries();
+      _loadPendingOperations();
       setState(() {});
     }
   }
 
-  /// Re-upload all pending entries
-  Future<void> _reuploadAllEntries() async {
+  /// Re-uploads all pending operations.
+  Future<void> _reuploadAllOperations() async {
     try {
-      await DatabaseService().reuploadAllPendingEntries();
+      await DatabaseService().reuploadAllPendingOperations();
     } catch (e) {
-      debugPrint('Error reuploading entries: $e');
+      debugPrint('Error reuploading operations: $e');
     } finally {
-      // Notify parent screen
       widget.onChangesUpdated?.call();
-
-      _loadPendingEntries();
+      _loadPendingOperations();
       setState(() {});
     }
   }
@@ -111,125 +99,102 @@ class _PendingChangesState extends State<PendingChanges> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Top Row
+        // Top Row with delete-all and reupload buttons.
         Row(
           children: [
-            // Left trash icon (28×32) with padding left:40, top:32, bottom:24
             Padding(
               padding: const EdgeInsets.only(left: 40, top: 32, bottom: 24),
               child: SizedBox(
                 width: 28,
                 height: 32,
                 child: IconButton(
-                  onPressed: _deleteAllEntries,
+                  onPressed: _deleteAllOperations,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   icon:
                       const FaIcon(FontAwesomeIcons.trash, color: Colors.black),
                   iconSize: 24,
-                  tooltip: 'Delete all local entries',
+                  tooltip: 'Delete all pending operations',
                 ),
               ),
             ),
-
             const Spacer(),
-
-            // Right upload icon (40×28) with padding top:34, right:32, bottom:26
             Padding(
               padding: const EdgeInsets.only(top: 34, right: 32, bottom: 26),
               child: SizedBox(
                 width: 40,
                 height: 28,
                 child: IconButton(
-                  onPressed: _reuploadAllEntries,
+                  onPressed: _reuploadAllOperations,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   icon: const FaIcon(FontAwesomeIcons.upload,
                       color: Colors.black),
                   iconSize: 22,
-                  tooltip: 'Reupload all local entries',
+                  tooltip: 'Reupload all pending operations',
                 ),
               ),
             ),
           ],
         ),
-
-        // Expanded list of pending entries
+        // Expanded list of pending operations.
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _pendingEntriesFuture,
+            future: _pendingOperationsFuture,
             builder: (context, snapshot) {
-              // Still loading
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-              // Error
               if (snapshot.hasError) {
                 return Center(
-                  child:
-                      Text('Error loading pending changes: ${snapshot.error}'),
+                  child: Text(
+                      'Error loading pending operations: ${snapshot.error}'),
                 );
               }
-
-              // Retrieve data
-              final entries = snapshot.data ?? [];
-              if (entries.isEmpty) {
-                return const Center(child: Text('No pending changes'));
+              final operations = snapshot.data ?? [];
+              if (operations.isEmpty) {
+                return const Center(child: Text('No pending operations'));
               }
-
-              _entries = entries;
-
-              // Plain, normal list with each entry in a light gray container
+              _operations = operations;
               return ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _entries.length,
+                itemCount: _operations.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
-                  final entry = _entries[index];
-                  final entryId = entry['id'] ?? 0;
-                  final nameOrId =
-                      entry['wineName'] ?? entry['wineId'] ?? 'Unknown';
-                  final density = entry['density'] ?? entry['sulfur'] ?? 0.0;
-                  final dateStr = entry['date'] as String? ?? '';
-
-                  // Parse date, format for display
+                  final operation = _operations[index];
+                  final operationId = operation['id'] ?? 0;
+                  final operationType = operation['operationType'] ?? 'Unknown';
+                  final payload = operation['payload'] ?? '{}';
+                  final timestampStr = operation['timestamp'] ?? '';
                   DateTime dateTime;
                   try {
-                    dateTime = DateTime.parse(dateStr);
+                    dateTime = DateTime.parse(timestampStr);
                   } catch (_) {
                     dateTime = DateTime.now();
                   }
                   final formattedTime =
                       DateFormat('EEE MMM d HH:mm').format(dateTime);
-
-                  // Each entry is a simple Container with no rounding
                   return Container(
-                    color: const Color(0xFFEFEFF0), // #EFEFF0
+                    color: const Color(0xFFEFEFF0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Left text area
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              vertical: 16.0,
-                              horizontal: 16.0,
-                            ),
+                                vertical: 16.0, horizontal: 16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Title1: nameOrId
                                 Text(
-                                  nameOrId.toString(),
+                                  operationType.toString(),
                                   style: _title1Style,
                                 ),
                                 const SizedBox(height: 4),
-                                // Footnote: "Value: x"
                                 Text(
-                                  'Value: $density',
+                                  'Payload: $payload',
                                   style: _footnoteStyle,
                                 ),
-                                // Footnote: date/time
                                 Text(
                                   formattedTime,
                                   style: _footnoteStyle,
@@ -238,23 +203,19 @@ class _PendingChangesState extends State<PendingChanges> {
                             ),
                           ),
                         ),
-
-                        // Trash icon at top=23, right=16, bottom=23
                         Padding(
                           padding: const EdgeInsets.only(
-                            top: 23,
-                            right: 16,
-                            bottom: 23,
-                          ),
+                              top: 23, right: 16, bottom: 23),
                           child: SizedBox(
                             child: IconButton(
-                              onPressed: () => _deleteSingleEntry(entryId),
+                              onPressed: () =>
+                                  _deleteSingleOperation(operationId),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               icon: const FaIcon(FontAwesomeIcons.trash),
                               iconSize: 24,
                               color: Colors.black,
-                              tooltip: 'Delete this entry',
+                              tooltip: 'Delete this operation',
                             ),
                           ),
                         ),

@@ -2,12 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:provider/provider.dart';
 import 'package:weinkeller/services/database_service.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
-import 'package:provider/provider.dart'; // NEW: For accessing ApiService and AuthService
-import 'package:weinkeller/services/api_service.dart'; // NEW
-import 'package:weinkeller/services/auth_service.dart'; // NEW
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,19 +43,32 @@ class _HomeScreenState extends State<HomeScreen> {
     _randomGreeting = _greetings[randomIndex];
   }
 
-  /// NEW: Fetch wines from the API using Provider.
-  Future<List<Map<String, dynamic>>> _fetchWines() async {
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final token = authService.authToken;
-    if (token != null && token.isNotEmpty) {
-      return await apiService.getAllWineTypes(token: token);
-    } else {
-      return [];
-    }
+  @override
+  void dispose() {
+    _qrController?.dispose();
+    super.dispose();
   }
 
-  /// NEW: Show a bottom sheet allowing the user to manually select a wine from a list.
+  /// Opens the PendingChanges bottom sheet.
+  void _showPendingChanges() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          constraints: const BoxConstraints(maxHeight: 414),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(54)),
+          ),
+          child: const PendingChanges(),
+        );
+      },
+    );
+  }
+
+  /// Shows a bottom sheet allowing the user to manually select a wine from a list.
   void _showManualSelectDialog() {
     showModalBottomSheet(
       context: context,
@@ -93,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(fontFamily: 'SF Pro')),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushNamed(context, '/qrResult',
+                      Navigator.pushNamed(context, '/entryDetails',
                           arguments: wine['id'].toString());
                     },
                   );
@@ -106,16 +117,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _qrController?.dispose();
-    super.dispose();
+  /// Dummy implementation to fetch a list of wines.
+  Future<List<Map<String, dynamic>>> _fetchWines() async {
+    // Replace this with an actual API call as needed.
+    await Future.delayed(const Duration(milliseconds: 500));
+    return [
+      {'id': '101', 'name': 'Chardonnay'},
+      {'id': '102', 'name': 'Merlot'},
+      {'id': '103', 'name': 'Cabernet Sauvignon'},
+      {'id': '104', 'name': 'Pinot Noir'},
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
+    final dbService = Provider.of<DatabaseService>(context, listen: false);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -145,9 +163,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 letterSpacing: 0.38,
               ),
             ),
-            // Use a StreamBuilder to listen for pending changes updates.
+            // Pending changes badge.
             StreamBuilder<int>(
-              stream: DatabaseService().pendingChangesStream,
+              stream: dbService.pendingOperationsStream,
               initialData: 0,
               builder: (context, snapshot) {
                 final count = snapshot.data ?? 0;
@@ -155,27 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Padding(
                         padding: const EdgeInsets.only(right: 32),
                         child: GestureDetector(
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              backgroundColor: Colors.transparent,
-                              isScrollControlled: true,
-                              builder: (context) {
-                                return Container(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 414,
-                                  ),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(54),
-                                    ),
-                                  ),
-                                  child: PendingChanges(),
-                                );
-                              },
-                            );
-                          },
+                          onTap: _showPendingChanges,
                           child: Stack(
                             children: [
                               Icon(
@@ -256,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Stack(
         children: [
-          // Background image
+          // Background image.
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -265,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Dark overlay for dark mode
+          // Dark overlay for dark mode.
           if (isDarkMode)
             Container(
               color: Color.alphaBlend(
@@ -273,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Colors.transparent,
               ),
             ),
-          // Error message overlay
+          // If an error exists, show a centered manual selection button with the error message.
           if (_errorMessage != null)
             Center(
               child: Padding(
@@ -281,12 +279,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        fontFamily: 'SF Pro',
+                        fontSize: 16,
+                        color: Colors.red,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed:
-                            _showManualSelectDialog, // NEW: Changed to manual selection dialog
+                        onPressed: _showManualSelectDialog,
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
                           backgroundColor: const Color(0xFFEFEFF0),
@@ -304,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         child: Text(
-                          'Manuell auswehlen', // NEW: Updated text
+                          'Manuell auswehlen',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontFamily: 'SF Pro',
@@ -322,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            // Show QRView if no error
+            // Show QRView if no error.
             QRView(
               key: _qrKey,
               onQRViewCreated: (QRViewController controller) {
@@ -332,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     setState(() {
                       _scannedCode = scanData.code;
                     });
-                    Navigator.pushNamed(context, '/qrResult',
+                    Navigator.pushNamed(context, '/entryDetails',
                         arguments: scanData.code);
                   }
                 });
@@ -345,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
             ),
-          // Bottom navigation bar
+          // Bottom navigation bar.
           Positioned(
             bottom: 0,
             left: 0,
@@ -366,8 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         tooltip: 'Open Menu',
                       ),
                       ElevatedButton(
-                        onPressed:
-                            _showManualSelectDialog, // NEW: Also allow manual selection from here if needed
+                        onPressed: _showManualSelectDialog,
                         style: ElevatedButton.styleFrom(
                           shape: const CircleBorder(),
                           padding: const EdgeInsets.all(18),

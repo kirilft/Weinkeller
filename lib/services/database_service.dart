@@ -1,4 +1,3 @@
-//database_service.dart
 import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -7,8 +6,8 @@ class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
   static Database? _database;
 
-  // A broadcast StreamController to emit changes in pending entries count.
-  final StreamController<int> _pendingChangesController =
+  // A broadcast StreamController to emit changes in pending operations count.
+  final StreamController<int> _pendingOperationsController =
       StreamController<int>.broadcast();
 
   factory DatabaseService() => _instance;
@@ -17,8 +16,7 @@ class DatabaseService {
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
-    // Initialize stream with current count
-    _updatePendingChangesCount();
+    _updatePendingOperationsCount();
     return _database!;
   }
 
@@ -28,11 +26,11 @@ class DatabaseService {
       join(path, 'weinkeller.db'),
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE pending_entries (
+          CREATE TABLE pending_operations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
-            density REAL,
-            wineId INTEGER
+            operationType TEXT,
+            payload TEXT,
+            timestamp TEXT
           )
         ''');
       },
@@ -41,73 +39,68 @@ class DatabaseService {
   }
 
   // Expose the stream so that the UI can listen to changes.
-  Stream<int> get pendingChangesStream => _pendingChangesController.stream;
+  Stream<int> get pendingOperationsStream =>
+      _pendingOperationsController.stream;
 
-  // Helper to fetch and update the pending changes count.
-  Future<int> _updatePendingChangesCount() async {
-    final count = await getPendingChangesCount();
-    _pendingChangesController.add(count);
+  Future<int> _updatePendingOperationsCount() async {
+    final count = await getPendingOperationsCount();
+    _pendingOperationsController.add(count);
     return count;
   }
 
-  /// Insert a new pending entry.
-  Future<int> insertPendingEntry(Map<String, dynamic> entry) async {
+  /// Insert a new pending operation.
+  Future<int> insertPendingOperation(Map<String, dynamic> operation) async {
     final db = await database;
-    final id = await db.insert('pending_entries', entry);
-    await _updatePendingChangesCount();
+    final id = await db.insert('pending_operations', operation);
+    await _updatePendingOperationsCount();
     return id;
   }
 
-  /// Retrieve all pending entries.
-  Future<List<Map<String, dynamic>>> getPendingEntries() async {
+  /// Retrieve all pending operations.
+  Future<List<Map<String, dynamic>>> getPendingOperations() async {
     final db = await database;
-    return await db.query('pending_entries');
+    return await db.query('pending_operations');
   }
 
-  /// Returns how many pending entries there are.
-  Future<int> getPendingChangesCount() async {
-    final entries = await getPendingEntries();
-    return entries.length;
+  /// Returns the number of pending operations.
+  Future<int> getPendingOperationsCount() async {
+    final operations = await getPendingOperations();
+    return operations.length;
   }
 
-  /// Delete a single pending entry by ID.
-  Future<void> deletePendingEntry(int id) async {
+  /// Delete a single pending operation by ID.
+  Future<void> deletePendingOperation(int id) async {
     final db = await database;
-    await db.delete('pending_entries', where: 'id = ?', whereArgs: [id]);
-    await _updatePendingChangesCount();
+    await db.delete('pending_operations', where: 'id = ?', whereArgs: [id]);
+    await _updatePendingOperationsCount();
   }
 
-  /// Delete all pending entries.
-  Future<void> deleteAllPendingEntries() async {
+  /// Delete all pending operations.
+  Future<void> deleteAllPendingOperations() async {
     final db = await database;
-    await db.delete('pending_entries');
-    await _updatePendingChangesCount();
+    await db.delete('pending_operations');
+    await _updatePendingOperationsCount();
   }
 
-  /// Re-upload all pending entries, then remove them on success.
-  Future<void> reuploadAllPendingEntries() async {
+  /// Re-upload all pending operations, then remove them on success.
+  Future<void> reuploadAllPendingOperations() async {
     final db = await database;
-    final allPending = await getPendingEntries();
-
-    for (final entry in allPending) {
+    final allOperations = await getPendingOperations();
+    for (final operation in allOperations) {
       try {
-        // Replace with your actual API upload logic.
-        // await ApiService.uploadEntry(entry);
-        await db.delete(
-          'pending_entries',
-          where: 'id = ?',
-          whereArgs: [entry['id']],
-        );
+        // Replace with your actual API upload logic, e.g.:
+        // await ApiManager.uploadOperation(operation);
+        await db.delete('pending_operations',
+            where: 'id = ?', whereArgs: [operation['id']]);
       } catch (e) {
-        print('[DatabaseService] Reupload failed for $entry: $e');
+        print('[DatabaseService] Reupload failed for $operation: $e');
       }
     }
-
-    await _updatePendingChangesCount();
+    await _updatePendingOperationsCount();
   }
 
   /// Dispose the stream controller when it's no longer needed.
   void dispose() {
-    _pendingChangesController.close();
+    _pendingOperationsController.close();
   }
 }

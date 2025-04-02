@@ -8,7 +8,7 @@ import '../pages/welcome_screen.dart';
 import '../pages/settings.dart';
 import '../pages/account.dart';
 import '../pages/history.dart';
-import '../components/qr_result.dart';
+import '../components/EntryDetailsPage.dart';
 import '../pages/create_user.dart';
 import '../pages/web_ui.dart';
 
@@ -20,8 +20,8 @@ class AppRoutes {
       '/': (context) => Consumer<AuthService>(
             builder: (context, authService, _) {
               return authService.isLoggedIn
-                  ? const HomeScreen() // If token found => go home
-                  : const WelcomeScreen(); // If no token => go welcome
+                  ? const HomeScreen() // If token found, go home
+                  : const WelcomeScreen(); // If no token, go to welcome
             },
           ),
       '/login': (context) => const LoginPage(),
@@ -29,9 +29,9 @@ class AppRoutes {
       '/account': (context) => const AccountPage(),
       '/history': (context) => const HistoryPage(),
       '/webui': (context) => const WebUIView(),
-      '/qrResult': (context) {
+      '/entryDetails': (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
-        return QRResultPage(qrCode: args is String ? args : '');
+        return EntryDetailsPage(entryId: args is String ? args : '');
       },
       '/create_user': (context) => const CreateUserPage(),
     };
