@@ -163,6 +163,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
 
   PreferredSizeWidget _buildAppBar(ThemeData theme) {
     return AppBar(
+      centerTitle: true,
       title: Text(
         'Account',
         style: TextStyle(

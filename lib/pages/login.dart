@@ -162,6 +162,7 @@ class _LoginPageState extends State<LoginPage> {
 
   PreferredSizeWidget _buildAppBar(ThemeData theme) {
     return AppBar(
+      centerTitle: true,
       title: Text(
         'Anmelden',
         style: TextStyle(
