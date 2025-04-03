@@ -1,4 +1,5 @@
 import 'dart:convert';
+// For SocketException
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart'; // for ChangeNotifier, debugPrint, etc.
@@ -22,9 +23,8 @@ class NoResponseException implements Exception {
 
 /// The main API service class.
 ///
-/// This version only handles API requests related to Users, Additives, and
-/// Fermentation Entries. All code related to Wines (barrels), MostTreatment,
-/// offline local caching, and background synchronization has been removed.
+/// This version only handles API requests related to Users, Additives,
+/// Fermentation Entries, WineTypes, and now AdditiveTypes.
 class ApiService extends ChangeNotifier {
   // Base URL which can be updated dynamically.
   String _baseUrl;
@@ -112,7 +112,6 @@ class ApiService extends ChangeNotifier {
           '[ApiService] registerUser() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] registerUser() - Response body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
@@ -175,7 +174,6 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getCurrentUser() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] getCurrentUser() - Response body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
@@ -317,6 +315,38 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  /// **NEW**: Retrieve all AdditiveTypes from the /api/AdditiveTypes endpoint.
+  Future<List<Map<String, dynamic>>> getAllAdditiveTypes(
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/AdditiveTypes');
+    debugPrint('[ApiService] getAllAdditiveTypes() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getAllAdditiveTypes() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getAllAdditiveTypes() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final List<dynamic> data = jsonDecode(response.body);
+        // Convert each JSON object into a Map<String, dynamic>.
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve additive types (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getAllAdditiveTypes() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
   // ==========================================================================
   // ========== FERMENTATION ENTRIES ==========
   // ==========================================================================
@@ -449,6 +479,153 @@ class ApiService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[ApiService] deleteFermentationEntry() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  // ==========================================================================
+  // ========== WINE TYPES ==========
+  // ==========================================================================
+
+  Future<List<Map<String, dynamic>>> getAllWineTypes(
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineTypes');
+    debugPrint('[ApiService] getAllWineTypes() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getAllWineTypes() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getAllWineTypes() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve wine types (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getAllWineTypes() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> createWineType(Map<String, dynamic> wineType,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineTypes');
+    debugPrint('[ApiService] createWineType() - URL: $url');
+    debugPrint('[ApiService] createWineType() - Request body: $wineType');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response =
+          await http.post(url, headers: headers, body: jsonEncode(wineType));
+      debugPrint(
+          '[ApiService] createWineType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] createWineType() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to create wine type (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createWineType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getWineType(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineTypes/$id');
+    debugPrint('[ApiService] getWineType() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getWineType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineType() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve wine type (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> updateWineType(String id, Map<String, dynamic> wineType,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineTypes/$id');
+    debugPrint('[ApiService] updateWineType() - URL: $url');
+    debugPrint('[ApiService] updateWineType() - Request body: $wineType');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response =
+          await http.put(url, headers: headers, body: jsonEncode(wineType));
+      debugPrint(
+          '[ApiService] updateWineType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateWineType() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update wine type: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateWineType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> deleteWineType(String id, {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineTypes/$id');
+    debugPrint('[ApiService] deleteWineType() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.delete(url, headers: headers);
+      debugPrint(
+          '[ApiService] deleteWineType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteWineType() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete wine type: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteWineType() - Error: $e');
       if (e.toString().contains('SocketException')) {
         throw NoResponseException('Unable to connect to $url.');
       }

@@ -5,10 +5,19 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:weinkeller/services/api_service.dart';
 import 'package:weinkeller/services/auth_service.dart';
+import 'package:weinkeller/services/api_manager.dart'; // Import ApiManager
 
-/// A simple data class to hold additive information.
+/// A simple model class to represent each additive, ensuring uniqueness by id.
+class AdditiveModel {
+  final String id;
+  final String type;
+
+  AdditiveModel({required this.id, required this.type});
+}
+
+/// A simple data class to hold additive information for each row.
 class _AdditiveEntry {
-  String? selectedAdditive;
+  AdditiveModel? selectedAdditive;
   String amount = '';
 
   _AdditiveEntry();
@@ -34,19 +43,15 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
   // List to hold additive entries; starts with one empty entry.
   final List<_AdditiveEntry> _additiveEntries = [_AdditiveEntry()];
 
-  // Sample list of available additives.
-  final List<String> _availableAdditives = [
-    'Sulfur',
-    'Yeast Nutrient',
-    'Acid',
-    'Pectic Enzyme'
-  ];
+  // List of additive data (with unique IDs) retrieved from AdditiveTypes.
+  List<AdditiveModel> _availableAdditives = [];
 
   @override
   void initState() {
     super.initState();
     HapticFeedback.lightImpact(); // Haptic feedback on page open
     _fetchEntryName();
+    _fetchAdditiveTypes(); // Load actual additive names from the API.
   }
 
   @override
@@ -56,8 +61,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
     super.dispose();
   }
 
-  /// Fetches the entry name using the API.
-  /// Expects the provided entryId to be convertible to an integer.
+  /// Fetches the entry (wine type) name using the WineTypes API endpoint.
   Future<void> _fetchEntryName() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final token = authService.authToken;
@@ -67,16 +71,14 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
       });
       return;
     }
-    // Convert the provided entryId string to int.
-    final int? parsedId = int.tryParse(widget.entryId);
-    if (parsedId == null || parsedId == 0) {
+    if (widget.entryId.isEmpty) {
       _showErrorDialog('Entry ID Error', 'Invalid Entry ID provided.');
       return;
     }
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
-      final result =
-          await apiService.getFermentationEntry(parsedId, token: token);
+      // Use the WineTypes endpoint to get the wine type name
+      final result = await apiService.getWineType(widget.entryId, token: token);
       final String entryName = result['name'] ?? 'Unknown';
       setState(() {
         _entryName = entryName;
@@ -103,6 +105,34 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
           _entryName = 'Unknown';
         });
       }
+    }
+  }
+
+  /// Fetches the list of additive types from the API and populates _availableAdditives as a list of AdditiveModel.
+  Future<void> _fetchAdditiveTypes() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.authToken;
+    if (token == null || token.isEmpty) {
+      return;
+    }
+    try {
+      final apiManager = Provider.of<ApiManager>(context, listen: false);
+      final List<Map<String, dynamic>> additiveTypes =
+          await apiManager.getAllAdditiveTypes(token);
+      setState(() {
+        _availableAdditives = additiveTypes.map((e) {
+          return AdditiveModel(
+            id: e['id'] as String,
+            type: e['type'] as String,
+          );
+        }).toList();
+      });
+    } catch (e) {
+      debugPrint('[EntryDetailsPage] _fetchAdditiveTypes() - Error: $e');
+      // Fallback to empty list if it fails.
+      setState(() {
+        _availableAdditives = [];
+      });
     }
   }
 
@@ -164,11 +194,11 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
 
     List<Map<String, dynamic>> additivePayloads = [];
     for (var entry in _additiveEntries) {
-      if (entry.selectedAdditive != null &&
-          entry.selectedAdditive!.isNotEmpty) {
+      final selected = entry.selectedAdditive;
+      if (selected != null && selected.type.isNotEmpty) {
         if (entry.amount.trim().isEmpty) {
           _showErrorDialog('Validation Error',
-              'Please enter the amount for ${entry.selectedAdditive}.');
+              'Please enter the amount for ${selected.type}.');
           return;
         }
         double additiveAmount;
@@ -176,11 +206,11 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
           additiveAmount = double.parse(entry.amount);
         } catch (_) {
           _showErrorDialog('Validation Error',
-              'Amount for ${entry.selectedAdditive} must be a valid number.');
+              'Amount for ${selected.type} must be a valid number.');
           return;
         }
         additivePayloads.add({
-          'type': entry.selectedAdditive,
+          'type': selected.type, // Or 'id': selected.id, if your API needs it
           'date':
               DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(DateTime.now()),
           'amountGrammsPerLitre': additiveAmount,
@@ -199,6 +229,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
     setState(() => _isSubmitting = true);
 
     try {
+      // Send density if provided
       if (density != null) {
         await apiService.addFermentationEntry(
           token: token,
@@ -207,6 +238,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
           wineId: entryId, // Reusing the same field name for consistency.
         );
       }
+      // Send all additive entries
       for (var payload in additivePayloads) {
         await apiService.createAdditive(payload, token: token);
       }
@@ -269,24 +301,25 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
     });
   }
 
-  /// Builds a single additive row with a dropdown and, if selected, an amount field.
+  /// Builds a single additive row with a dropdown and amount field.
   Widget _buildAdditiveRow(int index) {
     final additiveEntry = _additiveEntries[index];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<AdditiveModel>(
           value: additiveEntry.selectedAdditive,
           hint: const Text('Select an additive'),
-          items: _availableAdditives.map((additive) {
-            return DropdownMenuItem<String>(
-              value: additive,
-              child: Text(additive),
+          items: _availableAdditives.map((model) {
+            return DropdownMenuItem<AdditiveModel>(
+              value: model,
+              child: Text(model.type),
             );
           }).toList(),
-          onChanged: (value) {
+          onChanged: (AdditiveModel? value) {
             setState(() {
               _additiveEntries[index].selectedAdditive = value;
+              // If user just selected a new additive in the last row, add another empty row
               if (value != null && index == _additiveEntries.length - 1) {
                 _additiveEntries.add(_AdditiveEntry());
               }
@@ -298,8 +331,9 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
             padding: const EdgeInsets.only(top: 8.0),
             child: TextField(
               decoration: InputDecoration(
-                labelText: '${additiveEntry.selectedAdditive} Amount',
-                hintText: 'Enter amount for ${additiveEntry.selectedAdditive}',
+                labelText: '${additiveEntry.selectedAdditive!.type} Amount',
+                hintText:
+                    'Enter amount for ${additiveEntry.selectedAdditive!.type}',
                 border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -343,11 +377,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Scanned Entry ID: ${widget.entryId}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 56),
                 Text(
                   _entryName.isEmpty ? 'Loading...' : _entryName,
                   style: const TextStyle(

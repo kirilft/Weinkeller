@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:weinkeller/services/database_service.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
+import 'package:weinkeller/services/auth_service.dart';
+import 'package:weinkeller/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,6 +70,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Fetches the list of wine types from the API.
+  Future<List<Map<String, dynamic>>> _fetchWines() async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.authToken;
+    if (token != null && token.isNotEmpty) {
+      return await apiService.getAllWineTypes(token: token);
+    } else {
+      return [];
+    }
+  }
+
   /// Shows a bottom sheet allowing the user to manually select a wine from a list.
   void _showManualSelectDialog() {
     showModalBottomSheet(
@@ -87,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final wines = snapshot.data ?? [];
             return Container(
               constraints: const BoxConstraints(maxHeight: 414),
+              padding: const EdgeInsets.only(top: 16),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(54)),
@@ -115,18 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
-  }
-
-  /// Dummy implementation to fetch a list of wines.
-  Future<List<Map<String, dynamic>>> _fetchWines() async {
-    // Replace this with an actual API call as needed.
-    await Future.delayed(const Duration(milliseconds: 500));
-    return [
-      {'id': '101', 'name': 'Chardonnay'},
-      {'id': '102', 'name': 'Merlot'},
-      {'id': '103', 'name': 'Cabernet Sauvignon'},
-      {'id': '104', 'name': 'Pinot Noir'},
-    ];
   }
 
   @override

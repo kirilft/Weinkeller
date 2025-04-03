@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 import 'database_service.dart';
@@ -33,6 +34,33 @@ class ApiManager {
     }
   }
 
+  /// Fetch all AdditiveTypes from the server, caching them locally.
+  /// On network error, fallback to the locally cached data (if any).
+  Future<List<Map<String, dynamic>>> getAllAdditiveTypes(String token) async {
+    try {
+      // Attempt remote fetch.
+      final remoteList = await apiService.getAllAdditiveTypes(token: token);
+      // If successful, store them in local DB.
+      await databaseService.clearCachedAdditiveTypes();
+      for (final item in remoteList) {
+        // item includes {id, type}
+        await databaseService.insertOrUpdateAdditiveType(item);
+      }
+      return remoteList;
+    } catch (e) {
+      debugPrint('[ApiManager] Error in getAllAdditiveTypes: $e');
+      // fallback to local cache if offline
+      final cached = await databaseService.getCachedAdditiveTypes();
+      if (cached.isEmpty) {
+        // If cache is empty => rethrow the error.
+        rethrow;
+      } else {
+        debugPrint('[ApiManager] Returning cached additive types from DB');
+        return cached;
+      }
+    }
+  }
+
   // -------------------------------
   // Group 2: Safe to commit later
   // -------------------------------
@@ -44,11 +72,11 @@ class ApiManager {
       return result;
     } catch (e) {
       debugPrint('[ApiManager] Error in createAdditive: $e');
-      if (e is NoResponseException ||
-          e.toString().contains('SocketException')) {
+      if (e.toString().contains('SocketException') ||
+          e is NoResponseException) {
         final operation = {
           'operationType': 'createAdditive',
-          'payload': additive,
+          'payload': jsonEncode(additive),
           'timestamp': DateTime.now().toIso8601String(),
         };
         await databaseService.insertPendingOperation(operation);
@@ -65,14 +93,11 @@ class ApiManager {
       await apiService.updateAdditive(id, additive, token: token);
     } catch (e) {
       debugPrint('[ApiManager] Error in updateAdditive: $e');
-      if (e is NoResponseException ||
-          e.toString().contains('SocketException')) {
+      if (e.toString().contains('SocketException') ||
+          e is NoResponseException) {
         final operation = {
           'operationType': 'updateAdditive',
-          'payload': {
-            'id': id,
-            'additive': additive,
-          },
+          'payload': jsonEncode({'id': id, 'additive': additive}),
           'timestamp': DateTime.now().toIso8601String(),
         };
         await databaseService.insertPendingOperation(operation);
@@ -90,15 +115,15 @@ class ApiManager {
           token: token, date: date, density: density, wineId: wineId);
     } catch (e) {
       debugPrint('[ApiManager] Error in addFermentationEntry: $e');
-      if (e is NoResponseException ||
-          e.toString().contains('SocketException')) {
+      if (e.toString().contains('SocketException') ||
+          e is NoResponseException) {
         final operation = {
           'operationType': 'addFermentationEntry',
-          'payload': {
+          'payload': jsonEncode({
             'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(date),
             'density': density,
             'wineId': wineId,
-          },
+          }),
           'timestamp': DateTime.now().toIso8601String(),
         };
         await databaseService.insertPendingOperation(operation);
@@ -108,6 +133,4 @@ class ApiManager {
       rethrow;
     }
   }
-
-  // Optionally, you can add similar safe commit methods for deletion or other actions.
 }

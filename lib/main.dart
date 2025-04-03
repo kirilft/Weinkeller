@@ -12,6 +12,7 @@ import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/sync_service.dart';
 import 'services/database_service.dart'; // Added DatabaseService
+import 'services/api_manager.dart'; // Added ApiManager import
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -32,18 +33,24 @@ Future<void> main() async {
     // Create the DatabaseService (singleton).
     final databaseService = DatabaseService();
 
+    // Create the ApiManager.
+    final apiManager =
+        ApiManager(apiService: apiService, databaseService: databaseService);
+
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider<ApiService>(create: (_) => apiService),
           ChangeNotifierProvider<AuthService>(create: (_) => authService),
           Provider<DatabaseService>(create: (_) => databaseService),
+          Provider<ApiManager>(create: (_) => apiManager), // <-- Add this
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
           ChangeNotifierProvider<SyncService>(
-              create: (_) => SyncService(
-                    apiService: apiService,
-                    databaseService: databaseService,
-                  )),
+            create: (_) => SyncService(
+                apiService: apiService,
+                databaseService: databaseService,
+                syncInterval: const Duration(seconds: 5)),
+          ),
         ],
         // Wrap the app in AppInitializer to perform initial checks.
         child: const AppInitializer(
@@ -56,10 +63,11 @@ Future<void> main() async {
   });
 }
 
-/// A top-level widget that initializes the app state by invoking AuthService.initialize().
+/// A top-level widget that initializes the app state by invoking AuthService.initialize()
+/// and starting the sync service if a valid token is available.
 class AppInitializer extends StatefulWidget {
   final Widget child;
-  const AppInitializer({Key? key, required this.child}) : super(key: key);
+  const AppInitializer({super.key, required this.child});
 
   @override
   _AppInitializerState createState() => _AppInitializerState();
@@ -73,6 +81,11 @@ class _AppInitializerState extends State<AppInitializer> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final authService = Provider.of<AuthService>(context, listen: false);
       await authService.initialize(context);
+      if (authService.authToken != null && authService.authToken!.isNotEmpty) {
+        final syncService = Provider.of<SyncService>(context, listen: false);
+        syncService.startSync(authService.authToken!);
+        debugPrint('Sync service started with token.');
+      }
     });
   }
 
@@ -83,7 +96,7 @@ class _AppInitializerState extends State<AppInitializer> {
 }
 
 class MyWeinkellerApp extends StatefulWidget {
-  const MyWeinkellerApp({Key? key}) : super(key: key);
+  const MyWeinkellerApp({super.key});
 
   @override
   _MyWeinkellerAppState createState() => _MyWeinkellerAppState();
@@ -155,10 +168,10 @@ class LanguageChangeNotifier extends InheritedWidget {
   final Function(Locale) onLocaleChanged;
 
   const LanguageChangeNotifier({
-    Key? key,
+    super.key,
     required this.onLocaleChanged,
-    required Widget child,
-  }) : super(key: key, child: child);
+    required super.child,
+  });
 
   static LanguageChangeNotifier? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<LanguageChangeNotifier>();
