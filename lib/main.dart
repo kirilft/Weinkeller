@@ -49,7 +49,7 @@ Future<void> main() async {
             create: (_) => SyncService(
                 apiService: apiService,
                 databaseService: databaseService,
-                syncInterval: const Duration(seconds: 5)),
+                syncInterval: const Duration(seconds: 300)),
           ),
         ],
         // Wrap the app in AppInitializer to perform initial checks.

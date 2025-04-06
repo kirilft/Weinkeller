@@ -351,9 +351,12 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: theme.brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -380,8 +383,8 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
                 const SizedBox(height: 56),
                 Text(
                   _entryName.isEmpty ? 'Loading...' : _entryName,
-                  style: const TextStyle(
-                    color: Color(0xFF000000),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontFamily: 'SF Pro',
                     fontSize: 20,
                     fontStyle: FontStyle.normal,
@@ -407,7 +410,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
                 const SizedBox(height: 24),
                 Text(
                   'Additives (optional)',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Column(

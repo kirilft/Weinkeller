@@ -96,15 +96,25 @@ class _HomeScreenState extends State<HomeScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Center(child: Text('Error loading wines'));
+              return Center(
+                child: Text(
+                  'Error loading wines',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontFamily: 'SF Pro',
+                    fontSize: 16,
+                  ),
+                ),
+              );
             }
             final wines = snapshot.data ?? [];
             return Container(
               constraints: const BoxConstraints(maxHeight: 414),
               padding: const EdgeInsets.only(top: 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(54)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(54)),
               ),
               child: ListView.separated(
                 padding:
