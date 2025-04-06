@@ -79,7 +79,7 @@ class _AccountPageState extends State<AccountPage> {
       });
     } catch (e) {
       // Show a simple error dialog or handle otherwise as desired.
-      _showErrorDialog("Error", "Failed to load user data: $e");
+      _showErrorDialog("Fehler", "Laden der Benutzerdaten fehlgeschlagen: $e");
     }
   }
 
@@ -94,15 +94,15 @@ class _AccountPageState extends State<AccountPage> {
   /// In production, this would be a PUT or PATCH request to your API.
   Future<void> _updateAccountInfo(String field) async {
     await Future.delayed(const Duration(seconds: 1));
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text("$field updated successfully")));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$field erfolgreich aktualisiert")));
   }
 
   /// Handle logout action with confirmation.
   Future<void> _handleLogout() async {
     final confirmed = await _showConfirmationDialog(
-      "Logout",
-      "Are you sure you want to logout?",
+      "Abmelden",
+      "Sind Sie sicher, dass Sie sich abmelden möchten?",
     );
     if (confirmed) {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -114,8 +114,8 @@ class _AccountPageState extends State<AccountPage> {
   /// Handle delete account action with confirmation.
   Future<void> _handleDeleteAccount() async {
     final confirmed = await _showConfirmationDialog(
-      "Delete Account",
-      "Are you sure you want to delete your account? This action is irreversible.",
+      "Konto löschen",
+      "Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion ist unwiderruflich.",
     );
     if (confirmed) {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -125,7 +125,7 @@ class _AccountPageState extends State<AccountPage> {
         await authService.logout();
         Navigator.pushReplacementNamed(context, '/');
       } catch (e) {
-        _showErrorDialog("Delete Account Error", e.toString());
+        _showErrorDialog("Fehler beim Löschen des Kontos", e.toString());
       }
     }
   }
@@ -140,11 +140,12 @@ class _AccountPageState extends State<AccountPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
+            child: const Text("Abbrechen"),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Confirm", style: TextStyle(color: Colors.red)),
+            child:
+                const Text("Bestätigen", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -203,7 +204,7 @@ class _AccountPageState extends State<AccountPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Account",
+          "Konto",
           style: appBarTextStyle, // Apply the new style here
         ),
       ),
@@ -228,13 +229,13 @@ class _AccountPageState extends State<AccountPage> {
               ),
               const SizedBox(height: 16),
               _buildEditableField(
-                label: "Email",
+                label: "E-Mail",
                 controller: _emailController,
                 isEditing: _isEditingEmail,
                 onEditToggle: () {
                   setState(() {
                     _isEditingEmail = !_isEditingEmail;
-                    if (!_isEditingEmail) _updateAccountInfo("Email");
+                    if (!_isEditingEmail) _updateAccountInfo("E-Mail");
                   });
                 },
               ),
@@ -250,7 +251,7 @@ class _AccountPageState extends State<AccountPage> {
               TextButton(
                 onPressed: _handleDeleteAccount,
                 child: const Text(
-                  "Delete Account",
+                  "Konto löschen",
                   style:
                       TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                 ),
@@ -258,7 +259,7 @@ class _AccountPageState extends State<AccountPage> {
               TextButton(
                 onPressed: _handleLogout,
                 child: const Text(
-                  "Logout",
+                  "Abmelden",
                   style:
                       TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                 ),

@@ -115,19 +115,21 @@ class _CreateUserPageState extends State<CreateUserPage> {
     final confirmPassword = _confirmPasswordController.text;
 
     if (name.isEmpty) {
-      _showErrorDialog("Validation Error", "Name cannot be empty. :3");
+      _showErrorDialog("Validierungsfehler", "Name darf nicht leer sein. :3");
       return;
     }
     if (email.isEmpty) {
-      _showErrorDialog("Validation Error", "Email cannot be empty. :3");
+      _showErrorDialog("Validierungsfehler", "E-Mail darf nicht leer sein. :3");
       return;
     }
     if (password.isEmpty) {
-      _showErrorDialog("Validation Error", "Password cannot be empty. :3");
+      _showErrorDialog(
+          "Validierungsfehler", "Passwort darf nicht leer sein. :3");
       return;
     }
     if (password != confirmPassword) {
-      _showErrorDialog("Validation Error", "Passwords do not match. :3");
+      _showErrorDialog(
+          "Validierungsfehler", "Passwörter stimmen nicht überein. :3");
       return;
     }
 
@@ -149,11 +151,11 @@ class _CreateUserPageState extends State<CreateUserPage> {
       if (loginSuccess) {
         Navigator.pushReplacementNamed(context, '/');
       } else {
-        _showErrorDialog("Login Error",
-            "Account created but failed to log in automatically. :3");
+        _showErrorDialog("Anmeldefehler",
+            "Konto erstellt, aber automatische Anmeldung fehlgeschlagen. :3");
       }
     } catch (e) {
-      _showErrorDialog("Registration Error", e.toString());
+      _showErrorDialog("Registrierungsfehler", e.toString());
     } finally {
       setState(() {
         _isLoading = false;
@@ -165,7 +167,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
     return AppBar(
       centerTitle: true,
       title: Text(
-        'Account',
+        'Konto',
         style: TextStyle(
           color: theme.colorScheme.onSurface,
           fontFamily: 'SFProDisplay',
@@ -227,7 +229,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
             const SizedBox(height: 24),
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(labelText: 'E-Mail'),
             ),
             const SizedBox(height: 24),
             TextField(

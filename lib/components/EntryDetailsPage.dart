@@ -67,19 +67,20 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
     final token = authService.authToken;
     if (token == null || token.isEmpty) {
       setState(() {
-        _entryName = 'Unknown';
+        _entryName = 'Unbekannt';
       });
       return;
     }
     if (widget.entryId.isEmpty) {
-      _showErrorDialog('Entry ID Error', 'Invalid Entry ID provided.');
+      _showErrorDialog(
+          'Eintrags-ID Fehler', 'Ungültige Eintrags-ID angegeben.');
       return;
     }
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
       // Use the WineTypes endpoint to get the wine type name
       final result = await apiService.getWineType(widget.entryId, token: token);
-      final String entryName = result['name'] ?? 'Unknown';
+      final String entryName = result['name'] ?? 'Unbekannt';
       setState(() {
         _entryName = entryName;
       });
@@ -88,7 +89,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
       final continueOffline = await _showOfflineDialog();
       if (continueOffline) {
         setState(() {
-          _entryName = 'Unknown';
+          _entryName = 'Unbekannt';
         });
       }
     } catch (e) {
@@ -97,12 +98,13 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.of(context).popUntil((route) => route.isFirst);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Access denied to this entry')),
+            const SnackBar(
+                content: Text('Zugriff auf diesen Eintrag verweigert')),
           );
         });
       } else {
         setState(() {
-          _entryName = 'Unknown';
+          _entryName = 'Unbekannt';
         });
       }
     }
@@ -143,15 +145,15 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
           builder: (context) => AlertDialog(
             title: const Text('Offline'),
             content: const Text(
-                'You seem to be offline. Do you still want to continue?'),
+                'Es scheint, dass Sie offline sind. Möchten Sie trotzdem fortfahren?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: const Text('Abbrechen'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Continue'),
+                child: const Text('Fortfahren'),
               ),
             ],
           ),
@@ -168,8 +170,8 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
 
     if (token == null || token.isEmpty) {
       _showErrorDialog(
-        'Authentication Error',
-        'You must be logged in to submit data.',
+        'Authentifizierungsfehler',
+        'Sie müssen angemeldet sein, um Daten zu übermitteln.',
         showLoginButton: true,
       );
       return;
@@ -180,15 +182,16 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
       try {
         density = double.parse(densityInput);
       } catch (_) {
-        _showErrorDialog(
-            'Validation Error', 'Density must be a valid number (e.g., 0.98).');
+        _showErrorDialog('Validierungsfehler',
+            'Die Dichte muss eine gültige Zahl sein (z.B. 0,98).');
         return;
       }
     }
 
     final String entryId = widget.entryId;
     if (entryId.isEmpty) {
-      _showErrorDialog('Entry ID Error', 'Invalid Entry ID provided.');
+      _showErrorDialog(
+          'Eintrags-ID Fehler', 'Ungültige Eintrags-ID angegeben.');
       return;
     }
 
@@ -197,16 +200,16 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
       final selected = entry.selectedAdditive;
       if (selected != null && selected.type.isNotEmpty) {
         if (entry.amount.trim().isEmpty) {
-          _showErrorDialog('Validation Error',
-              'Please enter the amount for ${selected.type}.');
+          _showErrorDialog('Validierungsfehler',
+              'Bitte geben Sie die Menge für ${selected.type} ein.');
           return;
         }
         double additiveAmount;
         try {
           additiveAmount = double.parse(entry.amount);
         } catch (_) {
-          _showErrorDialog('Validation Error',
-              'Amount for ${selected.type} must be a valid number.');
+          _showErrorDialog('Validierungsfehler',
+              'Die Menge für ${selected.type} muss eine gültige Zahl sein.');
           return;
         }
         additivePayloads.add({
@@ -220,8 +223,8 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
     }
 
     if (density == null && additivePayloads.isEmpty) {
-      _showErrorDialog('Validation Error',
-          'Please enter a density value or add at least one additive.');
+      _showErrorDialog('Validierungsfehler',
+          'Bitte geben Sie einen Dichtewert ein oder fügen Sie mindestens ein Zusatzmittel hinzu.');
       return;
     }
 
@@ -243,18 +246,19 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
         await apiService.createAdditive(payload, token: token);
       }
       HapticFeedback.heavyImpact();
-      _showSuccessSnackbar('Entry added successfully!');
+      _showSuccessSnackbar('Eintrag erfolgreich hinzugefügt!');
     } catch (e) {
       debugPrint('[EntryDetailsPage] _submitData() - Error: $e');
       if (e.toString().contains('401')) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.of(context).popUntil((route) => route.isFirst);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Access denied to this entry')),
+            const SnackBar(
+                content: Text('Zugriff auf diesen Eintrag verweigert')),
           );
         });
       } else {
-        _showErrorDialog('Submission Error', e.toString());
+        _showErrorDialog('Übermittlungsfehler', e.toString());
       }
     } finally {
       setState(() => _isSubmitting = false);
@@ -277,7 +281,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
                   Navigator.of(context).pop();
                   Navigator.of(context).pushNamed('/login');
                 },
-                child: const Text('Login'),
+                child: const Text('Anmelden'),
               ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -309,7 +313,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
       children: [
         DropdownButtonFormField<AdditiveModel>(
           value: additiveEntry.selectedAdditive,
-          hint: const Text('Select an additive'),
+          hint: const Text('Wählen Sie ein Zusatzmittel'),
           items: _availableAdditives.map((model) {
             return DropdownMenuItem<AdditiveModel>(
               value: model,
@@ -331,9 +335,9 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
             padding: const EdgeInsets.only(top: 8.0),
             child: TextField(
               decoration: InputDecoration(
-                labelText: '${additiveEntry.selectedAdditive!.type} Amount',
+                labelText: '${additiveEntry.selectedAdditive!.type} Menge',
                 hintText:
-                    'Enter amount for ${additiveEntry.selectedAdditive!.type}',
+                    'Geben Sie die Menge für ${additiveEntry.selectedAdditive!.type} ein',
                 border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -365,7 +369,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Entry Details',
+          'Eintragsdetails',
           style: TextStyle(fontFamily: 'SF Pro'),
         ),
       ),
@@ -382,7 +386,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
               children: [
                 const SizedBox(height: 56),
                 Text(
-                  _entryName.isEmpty ? 'Loading...' : _entryName,
+                  _entryName.isEmpty ? 'Laden...' : _entryName,
                   style: TextStyle(
                     color: theme.colorScheme.onSurface,
                     fontFamily: 'SF Pro',
@@ -401,15 +405,15 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
                 TextField(
                   controller: _densityController,
                   decoration: const InputDecoration(
-                    labelText: 'Density',
-                    hintText: 'Enter the density value (e.g., 0.98)',
+                    labelText: 'Dichte',
+                    hintText: 'Geben Sie den Dichtewert ein (z.B. 0,98)',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Additives (optional)',
+                  'Zusatzmittel (optional)',
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
@@ -426,7 +430,7 @@ class _EntryDetailsPageState extends State<EntryDetailsPage> {
                         alignment: Alignment.centerRight,
                         child: ElevatedButton(
                           onPressed: _submitData,
-                          child: const Text('Submit'),
+                          child: const Text('Absenden'),
                         ),
                       ),
               ],

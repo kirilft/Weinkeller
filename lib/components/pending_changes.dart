@@ -114,7 +114,7 @@ class _PendingChangesState extends State<PendingChanges> {
                   icon:
                       const FaIcon(FontAwesomeIcons.trash, color: Colors.black),
                   iconSize: 24,
-                  tooltip: 'Delete all pending operations',
+                  tooltip: 'Alle ausstehenden Operationen löschen',
                 ),
               ),
             ),
@@ -131,7 +131,7 @@ class _PendingChangesState extends State<PendingChanges> {
                   icon: const FaIcon(FontAwesomeIcons.upload,
                       color: Colors.black),
                   iconSize: 22,
-                  tooltip: 'Reupload all pending operations',
+                  tooltip: 'Alle ausstehenden Operationen erneut hochladen',
                 ),
               ),
             ),
@@ -148,12 +148,13 @@ class _PendingChangesState extends State<PendingChanges> {
               if (snapshot.hasError) {
                 return Center(
                   child: Text(
-                      'Error loading pending operations: ${snapshot.error}'),
+                      'Fehler beim Laden der ausstehenden Operationen: ${snapshot.error}'),
                 );
               }
               final operations = snapshot.data ?? [];
               if (operations.isEmpty) {
-                return const Center(child: Text('No pending operations'));
+                return const Center(
+                    child: Text('Keine ausstehenden Operationen'));
               }
               _operations = operations;
               return ListView.separated(
@@ -163,7 +164,8 @@ class _PendingChangesState extends State<PendingChanges> {
                 itemBuilder: (context, index) {
                   final operation = _operations[index];
                   final operationId = operation['id'] ?? 0;
-                  final operationType = operation['operationType'] ?? 'Unknown';
+                  final operationType =
+                      operation['operationType'] ?? 'Unbekannt';
                   final payload = operation['payload'] ?? '{}';
                   final timestampStr = operation['timestamp'] ?? '';
                   DateTime dateTime;
@@ -192,7 +194,7 @@ class _PendingChangesState extends State<PendingChanges> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Payload: $payload',
+                                  'Nutzlast: $payload',
                                   style: _footnoteStyle,
                                 ),
                                 Text(
@@ -215,7 +217,7 @@ class _PendingChangesState extends State<PendingChanges> {
                               icon: const FaIcon(FontAwesomeIcons.trash),
                               iconSize: 24,
                               color: Colors.black,
-                              tooltip: 'Delete this operation',
+                              tooltip: 'Diese Operation löschen',
                             ),
                           ),
                         ),

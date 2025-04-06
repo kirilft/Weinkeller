@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:intl/intl.dart'; // <-- ADD THIS
+import 'package:intl/intl.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -20,26 +20,22 @@ class _HistoryPageState extends State<HistoryPage> {
     _entriesFuture = _loadHistoryFromFile();
   }
 
-  /// Get the path for the local history file
   Future<File> _getHistoryFile() async {
     final directory = await getApplicationDocumentsDirectory();
     return File('${directory.path}/fermentation_history.json');
   }
 
-  /// Load all history entries from the local file
   Future<List<Map<String, dynamic>>> _loadHistoryFromFile() async {
     try {
       final file = await _getHistoryFile();
-
-      // Check if the file exists
       if (await file.exists()) {
         final content = await file.readAsString();
         return List<Map<String, dynamic>>.from(jsonDecode(content));
       } else {
-        return []; // Return empty list if file doesn't exist
+        return [];
       }
     } catch (e) {
-      print('[HistoryPage] Error loading history: $e');
+      print('[HistoryPage] Fehler beim Laden der Historie: $e');
       return [];
     }
   }
@@ -48,7 +44,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History'),
+        title: const Text('Verlauf'),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _entriesFuture,
@@ -56,35 +52,58 @@ class _HistoryPageState extends State<HistoryPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Fehler: ${snapshot.error}'));
           } else if (snapshot.data == null || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No history available.'));
+            return const Center(child: Text('Keine Historie verfügbar.'));
           } else {
             final entries = snapshot.data!;
             return ListView.builder(
               itemCount: entries.length,
               itemBuilder: (context, index) {
                 final entry = entries[index];
+                String operationType = entry['operationType'] ?? 'Unbekannt';
 
-                // Safely parse and format the date
-                String formattedDate;
+                // Format the recorded timestamp
+                String formattedTimestamp;
                 try {
-                  final dateTime = DateTime.parse(entry['date']);
-                  formattedDate = DateFormat('y MMM d HH:mm').format(dateTime);
-                  // Example format: Jan 14, 2025. 16:30
+                  final ts = DateTime.parse(entry['timestamp']);
+                  formattedTimestamp = DateFormat('y MMM d HH:mm').format(ts);
                 } catch (e) {
-                  // If parsing fails, just fall back to the raw string
-                  formattedDate = entry['date'].toString();
+                  formattedTimestamp = entry['timestamp'].toString();
                 }
 
-                return ListTile(
-                  title: Text('Wine ID: ${entry['wineId']}'),
-                  subtitle: Text(
-                    'Density: ${entry['density']}\n'
-                    'Date: $formattedDate',
-                  ),
-                  isThreeLine: true,
-                );
+                if (operationType == 'addFermentationEntry') {
+                  final payload = entry['payload'];
+                  String wineId =
+                      payload['wineId']?.toString() ?? 'Nicht verfügbar';
+                  String density =
+                      payload['density']?.toString() ?? 'Nicht verfügbar';
+                  String dateStr = payload['date']?.toString() ?? '';
+                  String formattedDate;
+                  try {
+                    final dateTime = DateTime.parse(dateStr);
+                    formattedDate =
+                        DateFormat('y MMM d HH:mm').format(dateTime);
+                  } catch (e) {
+                    formattedDate = dateStr;
+                  }
+                  return ListTile(
+                    title: Text('Wein-ID: $wineId'),
+                    subtitle: Text(
+                      'Dichte: $density\nDatum: $formattedDate\nAufgezeichnet: $formattedTimestamp',
+                    ),
+                    isThreeLine: true,
+                  );
+                } else {
+                  // Display a generic history entry.
+                  return ListTile(
+                    title: Text('Vorgang: $operationType'),
+                    subtitle: Text(
+                      'Details: ${entry['payload']}\nAufgezeichnet: $formattedTimestamp',
+                    ),
+                    isThreeLine: true,
+                  );
+                }
               },
             );
           }

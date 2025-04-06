@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'generated/l10n.dart'; // Localization import
 
 import 'config/routes.dart';
 import 'config/app_colors.dart';
@@ -11,8 +9,9 @@ import 'config/theme.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/sync_service.dart';
-import 'services/database_service.dart'; // Added DatabaseService
-import 'services/api_manager.dart'; // Added ApiManager import
+import 'services/database_service.dart';
+import 'services/api_manager.dart';
+import 'services/history_service.dart';
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -33,9 +32,15 @@ Future<void> main() async {
     // Create the DatabaseService (singleton).
     final databaseService = DatabaseService();
 
-    // Create the ApiManager.
-    final apiManager =
-        ApiManager(apiService: apiService, databaseService: databaseService);
+    // Create the HistoryService.
+    final historyService = HistoryService();
+
+    // Create the ApiManager with the new historyService parameter.
+    final apiManager = ApiManager(
+      apiService: apiService,
+      databaseService: databaseService,
+      historyService: historyService,
+    );
 
     runApp(
       MultiProvider(
@@ -43,16 +48,17 @@ Future<void> main() async {
           ChangeNotifierProvider<ApiService>(create: (_) => apiService),
           ChangeNotifierProvider<AuthService>(create: (_) => authService),
           Provider<DatabaseService>(create: (_) => databaseService),
-          Provider<ApiManager>(create: (_) => apiManager), // <-- Add this
+          Provider<ApiManager>(
+              create: (_) => apiManager), // Provided ApiManager
           ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
           ChangeNotifierProvider<SyncService>(
             create: (_) => SyncService(
-                apiService: apiService,
-                databaseService: databaseService,
-                syncInterval: const Duration(seconds: 300)),
+              apiService: apiService,
+              databaseService: databaseService,
+              syncInterval: const Duration(seconds: 300),
+            ),
           ),
         ],
-        // Wrap the app in AppInitializer to perform initial checks.
         child: const AppInitializer(
           child: MyWeinkellerApp(),
         ),
@@ -95,21 +101,8 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 }
 
-class MyWeinkellerApp extends StatefulWidget {
+class MyWeinkellerApp extends StatelessWidget {
   const MyWeinkellerApp({super.key});
-
-  @override
-  _MyWeinkellerAppState createState() => _MyWeinkellerAppState();
-}
-
-class _MyWeinkellerAppState extends State<MyWeinkellerApp> {
-  Locale _locale = const Locale('en'); // Default language
-
-  void _changeLocale(Locale locale) {
-    setState(() {
-      _locale = locale;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,20 +116,6 @@ class _MyWeinkellerAppState extends State<MyWeinkellerApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeProvider.themeMode,
-      locale: _locale, // Set current locale
-      supportedLocales: S.delegate.supportedLocales,
-      localizationsDelegates: const [
-        S.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      builder: (context, child) {
-        return LanguageChangeNotifier(
-          onLocaleChanged: _changeLocale,
-          child: child ?? const SizedBox(),
-        );
-      },
     );
   }
 
@@ -160,25 +139,5 @@ class _MyWeinkellerAppState extends State<MyWeinkellerApp> {
       ),
       fontFamily: 'SF Pro',
     );
-  }
-}
-
-/// Widget to notify locale changes.
-class LanguageChangeNotifier extends InheritedWidget {
-  final Function(Locale) onLocaleChanged;
-
-  const LanguageChangeNotifier({
-    super.key,
-    required this.onLocaleChanged,
-    required super.child,
-  });
-
-  static LanguageChangeNotifier? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<LanguageChangeNotifier>();
-  }
-
-  @override
-  bool updateShouldNotify(LanguageChangeNotifier oldWidget) {
-    return onLocaleChanged != oldWidget.onLocaleChanged;
   }
 }

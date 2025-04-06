@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _errorMessage;
 
   final List<String> _greetings = [
-    'Hello',
+    'Hallo',
     'Hallo',
     'Bonjour',
     'Ciao',
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// Opens the PendingChanges bottom sheet.
+  /// Öffnet das Bottom Sheet für ausstehende Änderungen.
   void _showPendingChanges() {
     showModalBottomSheet(
       context: context,
@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Fetches the list of wine types from the API.
+  /// Ruft die Liste der Weinsorten über die API ab.
   Future<List<Map<String, dynamic>>> _fetchWines() async {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final authService = Provider.of<AuthService>(context, listen: false);
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Shows a bottom sheet allowing the user to manually select a wine from a list.
+  /// Öffnet ein Bottom Sheet, in dem der Benutzer manuell einen Wein aus einer Liste auswählen kann.
   void _showManualSelectDialog() {
     showModalBottomSheet(
       context: context,
@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (snapshot.hasError) {
               return Center(
                 child: Text(
-                  'Error loading wines',
+                  'Fehler beim Laden der Weine',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.error,
                     fontFamily: 'SF Pro',
@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final wine = wines[index];
-                  final wineName = wine['name'] ?? 'Unknown Wine';
+                  final wineName = wine['name'] ?? 'Unbekannter Wein';
                   return ListTile(
                     title: Text(wineName,
                         style: const TextStyle(fontFamily: 'SF Pro')),
@@ -159,9 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(width: 64), // Left spacer
+            const SizedBox(width: 64), // Linker Abstand
             Text(
-              'Home',
+              'Startseite',
               style: TextStyle(
                 color: Colors.white,
                 fontFeatures: const [
@@ -176,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 letterSpacing: 0.38,
               ),
             ),
-            // Pending changes badge.
+            // Abzeichen für ausstehende Änderungen.
             StreamBuilder<int>(
               stream: dbService.pendingOperationsStream,
               initialData: 0,
@@ -245,21 +245,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: Icon(Icons.settings, color: theme.colorScheme.onSurface),
-              title: const Text('Settings',
+              title: const Text('Einstellungen',
                   style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/settings'),
             ),
             ListTile(
               leading: FaIcon(FontAwesomeIcons.cloud,
                   color: theme.colorScheme.onSurface),
-              title:
-                  const Text('Web UI', style: TextStyle(fontFamily: 'SF Pro')),
+              title: const Text('Web-Oberfläche',
+                  style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/webui'),
             ),
             ListTile(
               leading: Icon(Icons.history, color: theme.colorScheme.onSurface),
               title:
-                  const Text('History', style: TextStyle(fontFamily: 'SF Pro')),
+                  const Text('Verlauf', style: TextStyle(fontFamily: 'SF Pro')),
               onTap: () => Navigator.pushNamed(context, '/history'),
             ),
           ],
@@ -267,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Stack(
         children: [
-          // Background image.
+          // Hintergrundbild.
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -276,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Dark overlay for dark mode.
+          // Dunkle Überlagerung im Dunkelmodus.
           if (isDarkMode)
             Container(
               color: Color.alphaBlend(
@@ -284,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Colors.transparent,
               ),
             ),
-          // If an error exists, show a centered manual selection button with the error message.
+          // Falls ein Fehler vorliegt, wird ein zentrierter Button mit Fehlermeldung zur manuellen Auswahl angezeigt.
           if (_errorMessage != null)
             Center(
               child: Padding(
@@ -322,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         child: Text(
-                          'Manuell auswehlen',
+                          'Manuell auswählen',
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontFamily: 'SF Pro',
@@ -340,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           else
-            // Show QRView if no error.
+            // Zeigt den QRView an, falls kein Fehler vorliegt.
             QRView(
               key: _qrKey,
               onQRViewCreated: (QRViewController controller) {
@@ -358,12 +358,12 @@ class _HomeScreenState extends State<HomeScreen> {
               onPermissionSet: (ctrl, isGranted) {
                 if (!isGranted) {
                   setState(() {
-                    _errorMessage = 'Camera permission denied.';
+                    _errorMessage = 'Kamerazugriff verweigert.';
                   });
                 }
               },
             ),
-          // Bottom navigation bar.
+          // Untere Navigationsleiste.
           Positioned(
             bottom: 0,
             left: 0,
@@ -381,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 30, color: Colors.white),
                         onPressed: () =>
                             _scaffoldKey.currentState?.openDrawer(),
-                        tooltip: 'Open Menu',
+                        tooltip: 'Menü öffnen',
                       ),
                       ElevatedButton(
                         onPressed: _showManualSelectDialog,
@@ -402,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 30, color: Colors.white),
                         onPressed: () =>
                             Navigator.pushNamed(context, '/account'),
-                        tooltip: 'Open Account',
+                        tooltip: 'Konto öffnen',
                       ),
                     ],
                   ),

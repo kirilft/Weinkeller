@@ -64,7 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
     String newBaseUrl = _baseUrlController.text.trim();
     if (newBaseUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Base URL cannot be empty')),
+        const SnackBar(content: Text('Die Basis-URL darf nicht leer sein')),
       );
       return;
     }
@@ -74,7 +74,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (!_isValidUrl(newBaseUrl)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid URL format')),
+        const SnackBar(content: Text('Ungültiges URL-Format')),
       );
       return;
     }
@@ -85,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved!')),
+        const SnackBar(content: Text('Einstellungen gespeichert!')),
       );
     }
   }
@@ -101,7 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// Formats the cache size for display.
   String _formatCacheSize(int count) {
-    return "$count pending operation${count == 1 ? '' : 's'}";
+    return "$count ausstehende Operation${count == 1 ? '' : 'en'}";
   }
 
   @override
@@ -123,7 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Einstellungen'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -138,7 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             // --- API Settings ---
             const Text(
-              'API Settings',
+              'API-Einstellungen',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -148,7 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
             TextField(
               controller: _baseUrlController,
               decoration: const InputDecoration(
-                labelText: 'Base URL',
+                labelText: 'Basis-URL',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -169,7 +169,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   onPressed: _saveSettings,
                   child: Text(
-                    'Save',
+                    'Speichern',
                     style: TextStyle(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
@@ -188,7 +188,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const Divider(),
             const SizedBox(height: 20),
             const Text(
-              'Appearance',
+              'Erscheinungsbild',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -196,7 +196,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 10),
             RadioListTile<ThemeMode>(
-              title: const Text('System Default'),
+              title: const Text('Systemstandard'),
               value: ThemeMode.system,
               groupValue: currentTheme,
               onChanged: (ThemeMode? value) {
@@ -206,7 +206,7 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
             RadioListTile<ThemeMode>(
-              title: const Text('Light'),
+              title: const Text('Hell'),
               value: ThemeMode.light,
               groupValue: currentTheme,
               onChanged: (ThemeMode? value) {
@@ -216,7 +216,7 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
             RadioListTile<ThemeMode>(
-              title: const Text('Dark'),
+              title: const Text('Dunkel'),
               value: ThemeMode.dark,
               groupValue: currentTheme,
               onChanged: (ThemeMode? value) {
@@ -227,7 +227,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Select your preferred theme mode. Light mode is recommended for daytime use, while dark mode reduces eye strain in low-light environments.',
+              'Wählen Sie Ihren bevorzugten Anzeigemodus. Der helle Modus wird für den Tagesgebrauch empfohlen, während der dunkle Modus die Augen in schwach beleuchteten Umgebungen schont.',
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -237,7 +237,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                'Local Cache: ${_formatCacheSize(_cacheSize)}',
+                'Lokaler Cache: ${_formatCacheSize(_cacheSize)}',
                 style: const TextStyle(
                   color: AppColors.gray1,
                   fontFamily: 'SF Pro',

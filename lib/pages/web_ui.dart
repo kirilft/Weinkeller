@@ -10,13 +10,38 @@ class WebUIView extends StatefulWidget {
 
 class _WebUIViewState extends State<WebUIView> {
   late final WebViewController _controller;
+  String? _errorMessage; // Holds error details if a loading error occurs.
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse('https://kasai.tech'));
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            // Allow all navigations.
+            return NavigationDecision.navigate;
+          },
+          onPageStarted: (String url) {
+            // Reset any previous error messages when a new page starts loading.
+            setState(() {
+              _errorMessage = null;
+            });
+          },
+          onPageFinished: (String url) {
+            // Optionally, handle any post-loading actions here.
+          },
+          onWebResourceError: (WebResourceError error) {
+            // Update the state with error details.
+            setState(() {
+              _errorMessage =
+                  "Failed to load page.\nError Code: ${error.errorCode}\nDescription: ${error.description}";
+            });
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse('https://google.at'));
   }
 
   @override
@@ -38,6 +63,10 @@ class _WebUIViewState extends State<WebUIView> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              // Reset the error message and attempt to reload.
+              setState(() {
+                _errorMessage = null;
+              });
               _controller.reload();
             },
           ),
@@ -62,11 +91,44 @@ class _WebUIViewState extends State<WebUIView> {
                 Navigator.pushReplacementNamed(context, '/');
               },
             ),
-            // Add more menu items if needed.
+            // Additional menu items can be added here.
           ],
         ),
       ),
-      body: WebViewWidget(controller: _controller),
+      body: _errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(fontSize: 16, color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Retry loading the page.
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                        _controller.reload();
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : WebViewWidget(controller: _controller),
     );
   }
 }
