@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart'; // for ChangeNotifier, debugPrint, etc.
 
-/// Custom exceptions for server errors.
+// Custom exceptions for server errors.
 class WrongPasswordException implements Exception {
   final String message;
   WrongPasswordException(this.message);
@@ -281,40 +281,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> createAdditive(Map<String, dynamic> additive,
-      {required String token}) async {
-    final url = Uri.parse('$_baseUrl/Additives');
-    debugPrint('[ApiService] createAdditive() - URL: $url');
-    debugPrint('[ApiService] createAdditive() - Request body: $additive');
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-    try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: jsonEncode(additive),
-      );
-      debugPrint(
-          '[ApiService] createAdditive() - Response code: ${response.statusCode}');
-      debugPrint(
-          '[ApiService] createAdditive() - Response body: ${response.body}');
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception(
-            'Failed to create additive (status ${response.statusCode}): ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('[ApiService] createAdditive() - Error: $e');
-      if (e.toString().contains('SocketException')) {
-        throw NoResponseException('Unable to connect to $url.');
-      }
-      rethrow;
-    }
-  }
-
   /// **NEW**: Retrieve all AdditiveTypes from the /api/AdditiveTypes endpoint.
   Future<List<Map<String, dynamic>>> getAllAdditiveTypes(
       {required String token}) async {
@@ -351,18 +317,21 @@ class ApiService extends ChangeNotifier {
   // ========== FERMENTATION ENTRIES ==========
   // ==========================================================================
 
+  /// **Adds a fermentation entry**. We rename the parameter from `winebarrelid` to `wineId`
+  /// in the final payload to match the server's expectation.
   Future<void> addFermentationEntry({
     required String token,
     required DateTime date,
     required double density,
-    required String wineId,
+    required String winebarrelid, // Keep this parameter unchanged
   }) async {
     debugPrint('[ApiService] addFermentationEntry() called');
     final url = Uri.parse('$_baseUrl/FermentationEntries');
     final body = {
-      'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(date),
+      'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+          .format(date.toUtc()), // Use UTC
       'density': density,
-      'wineId': wineId,
+      'wineId': winebarrelid, // the server expects 'wineId'
     };
 
     debugPrint('[ApiService] addFermentationEntry() - URL: $url');
@@ -380,21 +349,38 @@ class ApiService extends ChangeNotifier {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
+
       debugPrint(
           '[ApiService] addFermentationEntry() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] addFermentationEntry() - Response body: ${response.body}');
+
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Failed to add fermentation entry: ${response.body}');
+        // Try to parse error response for more details
+        String errorDetails = response.body;
+        try {
+          final decodedBody = jsonDecode(response.body);
+          if (decodedBody is Map && decodedBody.containsKey('title')) {
+            errorDetails = decodedBody['title'];
+            if (decodedBody.containsKey('errors')) {
+              errorDetails += ': ${jsonEncode(decodedBody['errors'])}';
+            }
+          }
+        } catch (_) {
+          // Ignore decoding errors, use raw body
+        }
+        throw Exception(
+            'Failed to add fermentation entry (status ${response.statusCode}): $errorDetails');
       }
     } catch (e) {
       debugPrint('[ApiService] addFermentationEntry() - Error: $e');
-      if (e.toString().contains('SocketException') ||
-          e is NoResponseException) {
+      if (e is NoResponseException) {
+        rethrow; // Re-throw specific exception if already caught
+      } else if (e.toString().contains('SocketException')) {
         throw NoResponseException(
             'Unable to add fermentation entry. Please check your network connection.');
       } else {
-        rethrow;
+        rethrow; // Re-throw other exceptions
       }
     }
   }
@@ -626,6 +612,664 @@ class ApiService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[ApiService] deleteWineType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  // ==========================================================================
+  // ========== NEW API ENDPOINTS ==========
+  // ========== ADDITIVE TYPES ==========
+
+  /// Create a new Additive (mapped to the /api/Additives endpoint).
+  /// **FIXED:** This method now directly uses the 'additive' map parameter,
+  /// assuming ApiManager has already prepared the correct keys.
+  Future<Map<String, dynamic>> createAdditive(Map<String, dynamic> additive,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/Additives');
+    debugPrint('[ApiService] createAdditive() - URL: $url');
+
+    // *** FIX START ***
+    // Remove the redundant key adjustment. Assume 'additive' map has correct keys.
+    // final adjustedAdditive = {
+    //   'wineId': additive['winebarrelid'], // Problematic line removed
+    //   'additiveTypeId': additive['type'], // Problematic line removed
+    //   'amount': additive['amount'],
+    //   'unit': additive['unit'],
+    //   'addedAt': additive['addedAt'],
+    // };
+    // Use the 'additive' map directly as it should already be adjusted by ApiManager
+    debugPrint(
+        '[ApiService] createAdditive() - Request body (as received): $additive');
+    // *** FIX END ***
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        // *** FIX: Send the original 'additive' map directly ***
+        body: jsonEncode(additive),
+      );
+      debugPrint(
+          '[ApiService] createAdditive() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] createAdditive() - Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        // Try to parse error response for more details
+        String errorDetails = response.body;
+        try {
+          final decodedBody = jsonDecode(response.body);
+          if (decodedBody is Map && decodedBody.containsKey('title')) {
+            errorDetails = decodedBody['title'];
+            if (decodedBody.containsKey('errors')) {
+              errorDetails += ': ${jsonEncode(decodedBody['errors'])}';
+            }
+          }
+        } catch (_) {
+          // Ignore decoding errors, use raw body
+        }
+        throw Exception(
+            'Failed to create additive (status ${response.statusCode}): $errorDetails');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createAdditive() - Error: $e');
+      if (e is NoResponseException) {
+        rethrow; // Re-throw specific exception if already caught
+      } else if (e.toString().contains('SocketException')) {
+        throw NoResponseException(
+            'Unable to create additive. Please check your network connection.');
+      } else {
+        rethrow; // Re-throw other exceptions
+      }
+    }
+  }
+
+  /// Retrieve an AdditiveType by its ID.
+  Future<Map<String, dynamic>> getAdditiveType(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/AdditiveTypes/$id');
+    debugPrint('[ApiService] getAdditiveType() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getAdditiveType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getAdditiveType() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve additive type (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getAdditiveType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update an existing AdditiveType.
+  Future<void> updateAdditiveType(String id, Map<String, dynamic> additiveType,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/AdditiveTypes/$id');
+    debugPrint('[ApiService] updateAdditiveType() - URL: $url');
+    debugPrint(
+        '[ApiService] updateAdditiveType() - Request body: $additiveType');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response =
+          await http.put(url, headers: headers, body: jsonEncode(additiveType));
+      debugPrint(
+          '[ApiService] updateAdditiveType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateAdditiveType() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update additive type: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateAdditiveType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Delete an AdditiveType.
+  Future<void> deleteAdditiveType(String id, {required String token}) async {
+    final url = Uri.parse('$_baseUrl/AdditiveTypes/$id');
+    debugPrint('[ApiService] deleteAdditiveType() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.delete(url, headers: headers);
+      debugPrint(
+          '[ApiService] deleteAdditiveType() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteAdditiveType() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete additive type: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteAdditiveType() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  // ========== WINE BARRELS ==========
+
+  /// Retrieve all WineBarrels.
+  Future<List<Map<String, dynamic>>> getAllWineBarrels(
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels');
+    debugPrint('[ApiService] getAllWineBarrels() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getAllWineBarrels() - Response code: ${response.statusCode}');
+      // Limit log output for potentially large responses
+      debugPrint(
+          '[ApiService] getAllWineBarrels() - Response body length: ${response.bodyBytes.length}');
+      // debugPrint('[ApiService] getAllWineBarrels() - Response body: ${response.body}'); // Optionally log full body if needed
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve wine barrels (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getAllWineBarrels() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Create a new WineBarrel.
+  Future<Map<String, dynamic>> createWineBarrel(Map<String, dynamic> wineBarrel,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels');
+    debugPrint('[ApiService] createWineBarrel() - URL: $url');
+    debugPrint('[ApiService] createWineBarrel() - Request body: $wineBarrel');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response =
+          await http.post(url, headers: headers, body: jsonEncode(wineBarrel));
+      debugPrint(
+          '[ApiService] createWineBarrel() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] createWineBarrel() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to create wine barrel (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createWineBarrel() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieve a WineBarrel by its ID.
+  Future<Map<String, dynamic>> getWineBarrel(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id');
+    debugPrint('[ApiService] getWineBarrel() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getWineBarrel() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineBarrel() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 404) {
+        throw Exception('Wine barrel with ID $id not found.');
+      } else {
+        throw Exception(
+            'Failed to retrieve wine barrel (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineBarrel() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update an existing WineBarrel.
+  Future<void> updateWineBarrel(String id, Map<String, dynamic> wineBarrel,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id');
+    debugPrint('[ApiService] updateWineBarrel() - URL: $url');
+    debugPrint('[ApiService] updateWineBarrel() - Request body: $wineBarrel');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response =
+          await http.put(url, headers: headers, body: jsonEncode(wineBarrel));
+      debugPrint(
+          '[ApiService] updateWineBarrel() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateWineBarrel() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update wine barrel: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateWineBarrel() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Delete a WineBarrel.
+  Future<void> deleteWineBarrel(String id, {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id');
+    debugPrint('[ApiService] deleteWineBarrel() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.delete(url, headers: headers);
+      debugPrint(
+          '[ApiService] deleteWineBarrel() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteWineBarrel() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete wine barrel: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteWineBarrel() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieve the WineBarrelHistory for a given WineBarrel.
+  Future<List<Map<String, dynamic>>> getWineBarrelHistory(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/WineBarrelHistory');
+    debugPrint('[ApiService] getWineBarrelHistory() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getWineBarrelHistory() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineBarrelHistory() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve wine barrel history (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineBarrelHistory() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Insert wine into a barrel.
+  Future<void> insertWine(String id, String wineTypeId, DateTime startDate,
+      {required String token}) async {
+    final formattedDate = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+        .format(startDate.toUtc()); // Use UTC
+    final url = Uri.parse(
+        '$_baseUrl/WineBarrels/$id/InsertWine/$wineTypeId/$formattedDate');
+    debugPrint('[ApiService] insertWine() - URL: $url');
+    final headers = {
+      'Content-Type':
+          'application/json', // Content-Type might not be needed for POST with URL params
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      // Body is often empty for this kind of POST request where data is in the URL path
+      final response = await http.post(url, headers: headers);
+      debugPrint(
+          '[ApiService] insertWine() - Response code: ${response.statusCode}');
+      debugPrint('[ApiService] insertWine() - Response body: ${response.body}');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        // Allow 204 No Content
+        throw Exception(
+            'Failed to insert wine (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] insertWine() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Remove the current wine from a barrel.
+  Future<void> removeCurrentWine(String id, DateTime endDate,
+      {required String token}) async {
+    final formattedDate = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+        .format(endDate.toUtc()); // Use UTC
+    final url =
+        Uri.parse('$_baseUrl/WineBarrels/$id/RemoveCurrentWine/$formattedDate');
+    debugPrint('[ApiService] removeCurrentWine() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json', // Content-Type might not be needed
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      // Body is often empty for this kind of POST request
+      final response = await http.post(url, headers: headers);
+      debugPrint(
+          '[ApiService] removeCurrentWine() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] removeCurrentWine() - Response body: ${response.body}');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        // Allow 204 No Content
+        throw Exception(
+            'Failed to remove current wine (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] removeCurrentWine() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieve the WineType for a given barrel.
+  Future<Map<String, dynamic>> getWineTypeForBarrel(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/WineType');
+    debugPrint('[ApiService] getWineTypeForBarrel() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getWineTypeForBarrel() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getWineTypeForBarrel() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve wine type for barrel (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getWineTypeForBarrel() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieve the current WineHistory for a given barrel.
+  Future<Map<String, dynamic>> getCurrentWineHistory(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/CurrentWineHistory');
+    debugPrint('[ApiService] getCurrentWineHistory() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getCurrentWineHistory() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getCurrentWineHistory() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve current wine history (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getCurrentWineHistory() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieve the additives for a given wine barrel.
+  Future<List<Map<String, dynamic>>> getBarrelAdditives(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/Additives');
+    debugPrint('[ApiService] getBarrelAdditives() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getBarrelAdditives() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getBarrelAdditives() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve additives for wine barrel (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getBarrelAdditives() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Retrieve the fermentation entries for a given wine barrel.
+  Future<List<Map<String, dynamic>>> getBarrelFermentationEntries(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/FermentationEntries');
+    debugPrint('[ApiService] getBarrelFermentationEntries() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getBarrelFermentationEntries() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getBarrelFermentationEntries() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception(
+            'Failed to retrieve fermentation entries for wine barrel (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getBarrelFermentationEntries() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  // ========== MOST TREATMENT (WineBarrels) ==========
+
+  /// Retrieve the MostTreatment for a given wine barrel.
+  Future<Map<String, dynamic>> getMostTreatment(String id,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/MostTreatment');
+    debugPrint('[ApiService] getMostTreatment() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.get(url, headers: headers);
+      debugPrint(
+          '[ApiService] getMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] getMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to retrieve most treatment (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update the MostTreatment for a given wine barrel.
+  Future<void> updateMostTreatment(
+      String id, Map<String, dynamic> mostTreatment,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/MostTreatment');
+    debugPrint('[ApiService] updateMostTreatment() - URL: $url');
+    debugPrint(
+        '[ApiService] updateMostTreatment() - Request body: $mostTreatment');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.put(url,
+          headers: headers, body: jsonEncode(mostTreatment));
+      debugPrint(
+          '[ApiService] updateMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] updateMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to update most treatment: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Create a MostTreatment for a given wine barrel.
+  Future<Map<String, dynamic>> createMostTreatment(
+      String id, Map<String, dynamic> mostTreatment,
+      {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/MostTreatment');
+    debugPrint('[ApiService] createMostTreatment() - URL: $url');
+    debugPrint(
+        '[ApiService] createMostTreatment() - Request body: $mostTreatment');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.post(url,
+          headers: headers, body: jsonEncode(mostTreatment));
+      debugPrint(
+          '[ApiService] createMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] createMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+            'Failed to create most treatment (status ${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] createMostTreatment() - Error: $e');
+      if (e.toString().contains('SocketException')) {
+        throw NoResponseException('Unable to connect to $url.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Delete the MostTreatment for a given wine barrel.
+  Future<void> deleteMostTreatment(String id, {required String token}) async {
+    final url = Uri.parse('$_baseUrl/WineBarrels/$id/MostTreatment');
+    debugPrint('[ApiService] deleteMostTreatment() - URL: $url');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final response = await http.delete(url, headers: headers);
+      debugPrint(
+          '[ApiService] deleteMostTreatment() - Response code: ${response.statusCode}');
+      debugPrint(
+          '[ApiService] deleteMostTreatment() - Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete most treatment: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteMostTreatment() - Error: $e');
       if (e.toString().contains('SocketException')) {
         throw NoResponseException('Unable to connect to $url.');
       }

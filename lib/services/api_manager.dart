@@ -8,7 +8,7 @@ import 'history_service.dart';
 class ApiManager {
   final ApiService apiService;
   final DatabaseService databaseService;
-  final HistoryService historyService; // New dependency
+  final HistoryService historyService;
 
   ApiManager({
     required this.apiService,
@@ -21,8 +21,10 @@ class ApiManager {
   // -------------------------------
 
   Future<Map<String, dynamic>> getCurrentUser(String token) async {
+    debugPrint('[ApiManager] getCurrentUser() called.');
     try {
       final result = await apiService.getCurrentUser(token: token);
+      debugPrint('[ApiManager] getCurrentUser() succeeded: $result');
       return result;
     } catch (e) {
       debugPrint('[ApiManager] Error in getCurrentUser: $e');
@@ -31,8 +33,10 @@ class ApiManager {
   }
 
   Future<Map<String, dynamic>> getAdditive(int id, String token) async {
+    debugPrint('[ApiManager] getAdditive() called with id: $id');
     try {
       final result = await apiService.getAdditive(id, token: token);
+      debugPrint('[ApiManager] getAdditive() succeeded: $result');
       return result;
     } catch (e) {
       debugPrint('[ApiManager] Error in getAdditive: $e');
@@ -43,13 +47,14 @@ class ApiManager {
   /// Fetch all AdditiveTypes from the server, caching them locally.
   /// On network error, fallback to the locally cached data (if any).
   Future<List<Map<String, dynamic>>> getAllAdditiveTypes(String token) async {
+    debugPrint('[ApiManager] getAllAdditiveTypes() called.');
     try {
-      // Attempt remote fetch.
       final remoteList = await apiService.getAllAdditiveTypes(token: token);
+      debugPrint(
+          '[ApiManager] Fetched remote additive types: ${remoteList.length} items.');
       // If successful, store them in local DB.
       await databaseService.clearCachedAdditiveTypes();
       for (final item in remoteList) {
-        // item includes {id, type}
         await databaseService.insertOrUpdateAdditiveType(item);
       }
       return remoteList;
@@ -58,9 +63,11 @@ class ApiManager {
       // fallback to local cache if offline
       final cached = await databaseService.getCachedAdditiveTypes();
       if (cached.isEmpty) {
+        debugPrint('[ApiManager] No cached additive types found.');
         rethrow;
       } else {
-        debugPrint('[ApiManager] Returning cached additive types from DB');
+        debugPrint(
+            '[ApiManager] Returning ${cached.length} cached additive types from DB.');
         return cached;
       }
     }
@@ -70,17 +77,33 @@ class ApiManager {
   // Group 2: Safe to commit later
   // -------------------------------
 
+  /// Creates an additive both online (if possible) and logs it to history.
+  /// If offline, the operation is saved to pending operations.
   Future<Map<String, dynamic>> createAdditive(
       Map<String, dynamic> additive, String token) async {
+    debugPrint('[ApiManager] createAdditive() called with additive: $additive');
     try {
-      final result = await apiService.createAdditive(additive, token: token);
-      // Log history after successful commit
+      // Force conversion to String for the ID fields.
+      final adjustedAdditive = {
+        'wineId': additive['winebarrelid']?.toString(),
+        'additiveTypeId': additive['type']?.toString(),
+        'amount': additive['amount'],
+        'unit': additive['unit'],
+        'addedAt': additive['addedAt'],
+      };
+      debugPrint('[ApiManager] Adjusted additive: $adjustedAdditive');
+
+      final result =
+          await apiService.createAdditive(adjustedAdditive, token: token);
+      debugPrint('[ApiManager] Additive created successfully: $result');
+
       final historyEntry = {
         'operationType': 'createAdditive',
-        'payload': additive,
+        'payload': adjustedAdditive,
         'timestamp': DateTime.now().toIso8601String(),
       };
       await historyService.addHistoryEntry(historyEntry);
+      debugPrint('[ApiManager] History entry added: $historyEntry');
       return result;
     } catch (e) {
       debugPrint('[ApiManager] Error in createAdditive: $e');
@@ -88,7 +111,13 @@ class ApiManager {
           e is NoResponseException) {
         final operation = {
           'operationType': 'createAdditive',
-          'payload': jsonEncode(additive),
+          'payload': jsonEncode({
+            'wineId': additive['winebarrelid']?.toString(),
+            'additiveTypeId': additive['type']?.toString(),
+            'amount': additive['amount'],
+            'unit': additive['unit'],
+            'addedAt': additive['addedAt'],
+          }),
           'timestamp': DateTime.now().toIso8601String(),
         };
         await databaseService.insertPendingOperation(operation);
@@ -99,17 +128,23 @@ class ApiManager {
     }
   }
 
+  /// Updates an additive (if possible) and logs it to history.
+  /// If offline, the operation is saved to pending operations.
   Future<void> updateAdditive(
       int id, Map<String, dynamic> additive, String token) async {
+    debugPrint(
+        '[ApiManager] updateAdditive() called for id: $id with additive: $additive');
     try {
       await apiService.updateAdditive(id, additive, token: token);
-      // Log history after successful update
+      debugPrint('[ApiManager] updateAdditive() succeeded for id: $id');
+
       final historyEntry = {
         'operationType': 'updateAdditive',
         'payload': {'id': id, 'additive': additive},
         'timestamp': DateTime.now().toIso8601String(),
       };
       await historyService.addHistoryEntry(historyEntry);
+      debugPrint('[ApiManager] History entry added: $historyEntry');
     } catch (e) {
       debugPrint('[ApiManager] Error in updateAdditive: $e');
       if (e.toString().contains('SocketException') ||
@@ -127,22 +162,37 @@ class ApiManager {
     }
   }
 
+  /// Adds a fermentation entry both online (if possible) and logs it to history.
+  /// If offline, the operation is saved to pending operations.
   Future<void> addFermentationEntry(
-      String token, DateTime date, double density, String wineId) async {
+      String token, DateTime date, double density, String winebarrelid) async {
+    debugPrint(
+        '[ApiManager] addFermentationEntry() called with winebarrelid=$winebarrelid, density=$density, date=$date');
     try {
+      // Fetch wine barrel name for history logging.
+      final wineBarrel =
+          await apiService.getWineBarrel(winebarrelid, token: token);
+      final wineName = wineBarrel['name'] ?? 'Unbekannt';
+
       await apiService.addFermentationEntry(
-          token: token, date: date, density: density, wineId: wineId);
-      // Log history after successful commit
+        token: token,
+        date: date,
+        density: density,
+        winebarrelid: winebarrelid,
+      );
+      debugPrint('[ApiManager] Fermentation entry added successfully.');
+
       final historyEntry = {
         'operationType': 'addFermentationEntry',
         'payload': {
           'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(date),
           'density': density,
-          'wineId': wineId,
+          'wineId': wineName, // saving the barrel's name here
         },
         'timestamp': DateTime.now().toIso8601String(),
       };
       await historyService.addHistoryEntry(historyEntry);
+      debugPrint('[ApiManager] History entry added: $historyEntry');
     } catch (e) {
       debugPrint('[ApiManager] Error in addFermentationEntry: $e');
       if (e.toString().contains('SocketException') ||
@@ -152,7 +202,7 @@ class ApiManager {
           'payload': jsonEncode({
             'date': DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(date),
             'density': density,
-            'wineId': wineId,
+            'wineId': winebarrelid,
           }),
           'timestamp': DateTime.now().toIso8601String(),
         };

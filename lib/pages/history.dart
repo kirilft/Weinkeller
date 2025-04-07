@@ -22,7 +22,9 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Future<File> _getHistoryFile() async {
     final directory = await getApplicationDocumentsDirectory();
-    return File('${directory.path}/fermentation_history.json');
+    final file = File('${directory.path}/fermentation_history.json');
+    debugPrint('[HistoryPage] History file path: ${file.path}');
+    return file;
   }
 
   Future<List<Map<String, dynamic>>> _loadHistoryFromFile() async {
@@ -30,12 +32,14 @@ class _HistoryPageState extends State<HistoryPage> {
       final file = await _getHistoryFile();
       if (await file.exists()) {
         final content = await file.readAsString();
+        debugPrint('[HistoryPage] Loaded history content: $content');
         return List<Map<String, dynamic>>.from(jsonDecode(content));
       } else {
+        debugPrint('[HistoryPage] History file does not exist.');
         return [];
       }
     } catch (e) {
-      print('[HistoryPage] Fehler beim Laden der Historie: $e');
+      debugPrint('[HistoryPage] Error loading history: $e');
       return [];
     }
   }
@@ -73,7 +77,9 @@ class _HistoryPageState extends State<HistoryPage> {
                 }
 
                 if (operationType == 'addFermentationEntry') {
-                  final payload = entry['payload'];
+                  final payload = entry['payload'] is String
+                      ? jsonDecode(entry['payload'])
+                      : entry['payload'];
                   String wineId =
                       payload['wineId']?.toString() ?? 'Nicht verfügbar';
                   String density =
@@ -88,14 +94,13 @@ class _HistoryPageState extends State<HistoryPage> {
                     formattedDate = dateStr;
                   }
                   return ListTile(
-                    title: Text('Wein-ID: $wineId'),
+                    title: Text('Wein-Barrel: $wineId'),
                     subtitle: Text(
                       'Dichte: $density\nDatum: $formattedDate\nAufgezeichnet: $formattedTimestamp',
                     ),
                     isThreeLine: true,
                   );
                 } else {
-                  // Display a generic history entry.
                   return ListTile(
                     title: Text('Vorgang: $operationType'),
                     subtitle: Text(

@@ -39,18 +39,17 @@ class SyncService with ChangeNotifier {
 
     // 2) Now fetch new data from the server
     try {
-      debugPrint('[SyncService] Fetching latest WineTypes...');
-      final wineTypes = await apiService.getAllWineTypes(token: token);
-      // Clear local cache, then store them
-      await databaseService.clearCachedWineTypes();
-      for (final w in wineTypes) {
-        await databaseService.insertOrUpdateWineType(w);
+      debugPrint('[SyncService] Fetching latest WineBarrels...');
+      final wineBarrels = await apiService.getAllWineBarrels(token: token);
+      // Clear local cache for wine barrels, then store them
+      await databaseService.clearCachedWineBarrels();
+      for (final w in wineBarrels) {
+        await databaseService.insertOrUpdateWineBarrel(w);
       }
-      debugPrint('[SyncService] WineTypes updated successfully.');
+      debugPrint('[SyncService] WineBarrels updated successfully.');
 
       debugPrint('[SyncService] Fetching latest AdditiveTypes...');
       final additiveTypes = await apiService.getAllAdditiveTypes(token: token);
-      // Clear local cache, then store them
       await databaseService.clearCachedAdditiveTypes();
       for (final a in additiveTypes) {
         await databaseService.insertOrUpdateAdditiveType(a);

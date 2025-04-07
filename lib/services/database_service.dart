@@ -34,19 +34,19 @@ class DatabaseService {
             timestamp TEXT
           )
         ''');
-        // Create a table for caching wine types.
-        await db.execute('''
-          CREATE TABLE cached_wine_types (
-            id TEXT PRIMARY KEY,
-            name TEXT
-          )
-        ''');
-
+        // Removed the cached_wine_types table creation.
         // Create a table for caching additive types.
         await db.execute('''
           CREATE TABLE cached_additive_types (
             id TEXT PRIMARY KEY,
             type TEXT
+          )
+        ''');
+        // Create a table for caching wine barrels.
+        await db.execute('''
+          CREATE TABLE cached_wine_barrels (
+            id TEXT PRIMARY KEY,
+            name TEXT
           )
         ''');
       },
@@ -119,28 +119,6 @@ class DatabaseService {
     await _updatePendingOperationsCount();
   }
 
-  /// Inserts or updates a cached wine type.
-  Future<void> insertOrUpdateWineType(Map<String, dynamic> wineType) async {
-    final db = await database;
-    await db.insert(
-      'cached_wine_types',
-      wineType,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  /// Retrieves all cached wine types.
-  Future<List<Map<String, dynamic>>> getCachedWineTypes() async {
-    final db = await database;
-    return db.query('cached_wine_types');
-  }
-
-  /// Clears all cached wine types.
-  Future<void> clearCachedWineTypes() async {
-    final db = await database;
-    await db.delete('cached_wine_types');
-  }
-
   /// Inserts or updates a cached additive type.
   Future<void> insertOrUpdateAdditiveType(
       Map<String, dynamic> additiveType) async {
@@ -162,6 +140,22 @@ class DatabaseService {
   Future<void> clearCachedAdditiveTypes() async {
     final db = await database;
     await db.delete('cached_additive_types');
+  }
+
+  /// Inserts or updates a cached wine barrel.
+  Future<void> insertOrUpdateWineBarrel(Map<String, dynamic> wineBarrel) async {
+    final db = await database;
+    await db.insert(
+      'cached_wine_barrels',
+      wineBarrel,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Clears all cached wine barrels.
+  Future<void> clearCachedWineBarrels() async {
+    final db = await database;
+    await db.delete('cached_wine_barrels');
   }
 
   /// Dispose the stream controller when it's no longer needed.

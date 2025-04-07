@@ -71,12 +71,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Ruft die Liste der Weinsorten über die API ab.
+// --- Updated _fetchWines method ---
   Future<List<Map<String, dynamic>>> _fetchWines() async {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final authService = Provider.of<AuthService>(context, listen: false);
     final token = authService.authToken;
     if (token != null && token.isNotEmpty) {
-      return await apiService.getAllWineTypes(token: token);
+      // Updated to use WineBarrels instead of WineTypes.
+      return await apiService.getAllWineBarrels(token: token);
     } else {
       return [];
     }
