@@ -194,7 +194,7 @@ class ApiService extends ChangeNotifier {
   // ========== ADDITIVES ==========
   // ==========================================================================
 
-  Future<Map<String, dynamic>> getAdditive(int id,
+  Future<Map<String, dynamic>> getAdditive(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/Additives/$id');
     debugPrint('[ApiService] getAdditive() - URL: $url');
@@ -225,7 +225,7 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> updateAdditive(int id, Map<String, dynamic> additive,
+  Future<void> updateAdditive(String id, Map<String, dynamic> additive,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/Additives/$id');
     debugPrint('[ApiService] updateAdditive() - URL: $url');
@@ -256,7 +256,7 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteAdditive(int id, {required String token}) async {
+  Future<void> deleteAdditive(String id, {required String token}) async {
     final url = Uri.parse('$_baseUrl/Additives/$id');
     debugPrint('[ApiService] deleteAdditive() - URL: $url');
     final headers = {
@@ -298,7 +298,6 @@ class ApiService extends ChangeNotifier {
           '[ApiService] getAllAdditiveTypes() - Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
-        // Convert each JSON object into a Map<String, dynamic>.
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
         throw Exception(
@@ -323,7 +322,7 @@ class ApiService extends ChangeNotifier {
     required String token,
     required DateTime date,
     required double density,
-    required String winebarrelid, // Keep this parameter unchanged
+    required String winebarrelid, // Parameter remains as String
   }) async {
     debugPrint('[ApiService] addFermentationEntry() called');
     final url = Uri.parse('$_baseUrl/FermentationEntries');
@@ -356,7 +355,6 @@ class ApiService extends ChangeNotifier {
           '[ApiService] addFermentationEntry() - Response body: ${response.body}');
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        // Try to parse error response for more details
         String errorDetails = response.body;
         try {
           final decodedBody = jsonDecode(response.body);
@@ -375,17 +373,17 @@ class ApiService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[ApiService] addFermentationEntry() - Error: $e');
       if (e is NoResponseException) {
-        rethrow; // Re-throw specific exception if already caught
+        rethrow;
       } else if (e.toString().contains('SocketException')) {
         throw NoResponseException(
             'Unable to add fermentation entry. Please check your network connection.');
       } else {
-        rethrow; // Re-throw other exceptions
+        rethrow;
       }
     }
   }
 
-  Future<Map<String, dynamic>> getFermentationEntry(int id,
+  Future<Map<String, dynamic>> getFermentationEntry(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] getFermentationEntry() - URL: $url');
@@ -414,7 +412,7 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> updateFermentationEntry(int id, Map<String, dynamic> entry,
+  Future<void> updateFermentationEntry(String id, Map<String, dynamic> entry,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] updateFermentationEntry() - URL: $url');
@@ -446,7 +444,8 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteFermentationEntry(int id, {required String token}) async {
+  Future<void> deleteFermentationEntry(String id,
+      {required String token}) async {
     final url = Uri.parse('$_baseUrl/FermentationEntries/$id');
     debugPrint('[ApiService] deleteFermentationEntry() - URL: $url');
     final headers = {
@@ -623,28 +622,12 @@ class ApiService extends ChangeNotifier {
   // ========== NEW API ENDPOINTS ==========
   // ========== ADDITIVE TYPES ==========
 
-  /// Create a new Additive (mapped to the /api/Additives endpoint).
-  /// **FIXED:** This method now directly uses the 'additive' map parameter,
-  /// assuming ApiManager has already prepared the correct keys.
   Future<Map<String, dynamic>> createAdditive(Map<String, dynamic> additive,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/Additives');
     debugPrint('[ApiService] createAdditive() - URL: $url');
-
-    // *** FIX START ***
-    // Remove the redundant key adjustment. Assume 'additive' map has correct keys.
-    // final adjustedAdditive = {
-    //   'wineId': additive['winebarrelid'], // Problematic line removed
-    //   'additiveTypeId': additive['type'], // Problematic line removed
-    //   'amount': additive['amount'],
-    //   'unit': additive['unit'],
-    //   'addedAt': additive['addedAt'],
-    // };
-    // Use the 'additive' map directly as it should already be adjusted by ApiManager
     debugPrint(
         '[ApiService] createAdditive() - Request body (as received): $additive');
-    // *** FIX END ***
-
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -654,18 +637,15 @@ class ApiService extends ChangeNotifier {
       final response = await http.post(
         url,
         headers: headers,
-        // *** FIX: Send the original 'additive' map directly ***
         body: jsonEncode(additive),
       );
       debugPrint(
           '[ApiService] createAdditive() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] createAdditive() - Response body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        // Try to parse error response for more details
         String errorDetails = response.body;
         try {
           final decodedBody = jsonDecode(response.body);
@@ -675,26 +655,21 @@ class ApiService extends ChangeNotifier {
               errorDetails += ': ${jsonEncode(decodedBody['errors'])}';
             }
           }
-        } catch (_) {
-          // Ignore decoding errors, use raw body
-        }
+        } catch (_) {}
         throw Exception(
             'Failed to create additive (status ${response.statusCode}): $errorDetails');
       }
     } catch (e) {
       debugPrint('[ApiService] createAdditive() - Error: $e');
-      if (e is NoResponseException) {
-        rethrow; // Re-throw specific exception if already caught
-      } else if (e.toString().contains('SocketException')) {
+      if (e.toString().contains('SocketException')) {
         throw NoResponseException(
             'Unable to create additive. Please check your network connection.');
       } else {
-        rethrow; // Re-throw other exceptions
+        rethrow;
       }
     }
   }
 
-  /// Retrieve an AdditiveType by its ID.
   Future<Map<String, dynamic>> getAdditiveType(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/AdditiveTypes/$id');
@@ -724,7 +699,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Update an existing AdditiveType.
   Future<void> updateAdditiveType(String id, Map<String, dynamic> additiveType,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/AdditiveTypes/$id');
@@ -754,7 +728,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Delete an AdditiveType.
   Future<void> deleteAdditiveType(String id, {required String token}) async {
     final url = Uri.parse('$_baseUrl/AdditiveTypes/$id');
     debugPrint('[ApiService] deleteAdditiveType() - URL: $url');
@@ -782,7 +755,6 @@ class ApiService extends ChangeNotifier {
 
   // ========== WINE BARRELS ==========
 
-  /// Retrieve all WineBarrels.
   Future<List<Map<String, dynamic>>> getAllWineBarrels(
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels');
@@ -795,11 +767,8 @@ class ApiService extends ChangeNotifier {
       final response = await http.get(url, headers: headers);
       debugPrint(
           '[ApiService] getAllWineBarrels() - Response code: ${response.statusCode}');
-      // Limit log output for potentially large responses
       debugPrint(
           '[ApiService] getAllWineBarrels() - Response body length: ${response.bodyBytes.length}');
-      // debugPrint('[ApiService] getAllWineBarrels() - Response body: ${response.body}'); // Optionally log full body if needed
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((item) => item as Map<String, dynamic>).toList();
@@ -816,7 +785,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Create a new WineBarrel.
   Future<Map<String, dynamic>> createWineBarrel(Map<String, dynamic> wineBarrel,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels');
@@ -848,7 +816,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Retrieve a WineBarrel by its ID.
   Future<Map<String, dynamic>> getWineBarrel(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id');
@@ -880,7 +847,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Update an existing WineBarrel.
   Future<void> updateWineBarrel(String id, Map<String, dynamic> wineBarrel,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id');
@@ -909,7 +875,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Delete a WineBarrel.
   Future<void> deleteWineBarrel(String id, {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id');
     debugPrint('[ApiService] deleteWineBarrel() - URL: $url');
@@ -935,7 +900,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Retrieve the WineBarrelHistory for a given WineBarrel.
   Future<List<Map<String, dynamic>>> getWineBarrelHistory(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/WineBarrelHistory');
@@ -966,27 +930,23 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Insert wine into a barrel.
   Future<void> insertWine(String id, String wineTypeId, DateTime startDate,
       {required String token}) async {
-    final formattedDate = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-        .format(startDate.toUtc()); // Use UTC
+    final formattedDate =
+        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(startDate.toUtc());
     final url = Uri.parse(
         '$_baseUrl/WineBarrels/$id/InsertWine/$wineTypeId/$formattedDate');
     debugPrint('[ApiService] insertWine() - URL: $url');
     final headers = {
-      'Content-Type':
-          'application/json', // Content-Type might not be needed for POST with URL params
+      'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
     try {
-      // Body is often empty for this kind of POST request where data is in the URL path
       final response = await http.post(url, headers: headers);
       debugPrint(
           '[ApiService] insertWine() - Response code: ${response.statusCode}');
       debugPrint('[ApiService] insertWine() - Response body: ${response.body}');
       if (response.statusCode != 200 && response.statusCode != 204) {
-        // Allow 204 No Content
         throw Exception(
             'Failed to insert wine (status ${response.statusCode}): ${response.body}');
       }
@@ -999,27 +959,24 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Remove the current wine from a barrel.
   Future<void> removeCurrentWine(String id, DateTime endDate,
       {required String token}) async {
-    final formattedDate = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-        .format(endDate.toUtc()); // Use UTC
+    final formattedDate =
+        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(endDate.toUtc());
     final url =
         Uri.parse('$_baseUrl/WineBarrels/$id/RemoveCurrentWine/$formattedDate');
     debugPrint('[ApiService] removeCurrentWine() - URL: $url');
     final headers = {
-      'Content-Type': 'application/json', // Content-Type might not be needed
+      'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
     try {
-      // Body is often empty for this kind of POST request
       final response = await http.post(url, headers: headers);
       debugPrint(
           '[ApiService] removeCurrentWine() - Response code: ${response.statusCode}');
       debugPrint(
           '[ApiService] removeCurrentWine() - Response body: ${response.body}');
       if (response.statusCode != 200 && response.statusCode != 204) {
-        // Allow 204 No Content
         throw Exception(
             'Failed to remove current wine (status ${response.statusCode}): ${response.body}');
       }
@@ -1032,7 +989,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Retrieve the WineType for a given barrel.
   Future<Map<String, dynamic>> getWineTypeForBarrel(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/WineType');
@@ -1062,7 +1018,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Retrieve the current WineHistory for a given barrel.
   Future<Map<String, dynamic>> getCurrentWineHistory(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/CurrentWineHistory');
@@ -1092,7 +1047,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Retrieve the additives for a given wine barrel.
   Future<List<Map<String, dynamic>>> getBarrelAdditives(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/Additives');
@@ -1123,7 +1077,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Retrieve the fermentation entries for a given wine barrel.
   Future<List<Map<String, dynamic>>> getBarrelFermentationEntries(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/FermentationEntries');
@@ -1156,7 +1109,6 @@ class ApiService extends ChangeNotifier {
 
   // ========== MOST TREATMENT (WineBarrels) ==========
 
-  /// Retrieve the MostTreatment for a given wine barrel.
   Future<Map<String, dynamic>> getMostTreatment(String id,
       {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/MostTreatment');
@@ -1186,7 +1138,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Update the MostTreatment for a given wine barrel.
   Future<void> updateMostTreatment(
       String id, Map<String, dynamic> mostTreatment,
       {required String token}) async {
@@ -1217,7 +1168,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Create a MostTreatment for a given wine barrel.
   Future<Map<String, dynamic>> createMostTreatment(
       String id, Map<String, dynamic> mostTreatment,
       {required String token}) async {
@@ -1251,7 +1201,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  /// Delete the MostTreatment for a given wine barrel.
   Future<void> deleteMostTreatment(String id, {required String token}) async {
     final url = Uri.parse('$_baseUrl/WineBarrels/$id/MostTreatment');
     debugPrint('[ApiService] deleteMostTreatment() - URL: $url');
