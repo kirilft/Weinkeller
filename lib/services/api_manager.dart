@@ -21,8 +21,8 @@ class ApiManager {
   // --------------------------------------------------------------------------
   // Group 1: Methods primarily for fetching data with local caching fallback.
   // These methods attempt to fetch fresh data from the API. If successful,
-  // they update the local cache. If the API call fails (e.g., network error),
-  // they attempt to return data from the local cache.
+  // they update the local cache (managed by SyncService). If the API call fails
+  // (e.g., network error), they attempt to return data from the local cache.
   // --------------------------------------------------------------------------
 
   /// Fetch the current user's data. (No caching implemented here yet)
@@ -56,89 +56,110 @@ class ApiManager {
     }
   }
 
-  /// Fetch all AdditiveTypes from the server, caching them locally.
-  /// On network error, fallback to the locally cached data (if any).
+  /// Fetch all AdditiveTypes from the server, falling back to local cache on error.
+  /// The cache itself is updated periodically by SyncService.
   Future<List<Map<String, dynamic>>> getAllAdditiveTypes(String token) async {
     debugPrint('[ApiManager] getAllAdditiveTypes() called.');
     try {
+      // Always try to fetch fresh data first
       final remoteList = await apiService.getAllAdditiveTypes(token: token);
       debugPrint(
           '[ApiManager] Fetched remote additive types: ${remoteList.length} items.');
-
-      // If successful, clear and update the local DB cache.
-      await databaseService.clearCachedAdditiveTypes();
-      for (final item in remoteList) {
-        // Ensure item has 'id' before caching
-        if (item['id'] != null) {
-          await databaseService.insertOrUpdateAdditiveType(item);
-        } else {
-          debugPrint(
-              '[ApiManager] Warning: Skipping AdditiveType without ID: $item');
-        }
-      }
-      debugPrint('[ApiManager] Additive types cache updated.');
+      // Note: SyncService is responsible for updating the cache periodically.
+      // This method doesn't directly update cache on read.
       return remoteList; // Return the fresh data from API
     } catch (e) {
-      debugPrint('[ApiManager] Error fetching AdditiveTypes from API: $e');
+      debugPrint(
+          '[ApiManager] Error fetching AdditiveTypes from API: $e. Trying cache...');
       // Fallback to local cache if API fails
-      debugPrint('[ApiManager] Attempting to return cached AdditiveTypes...');
-      final cached = await databaseService.getCachedAdditiveTypes();
-      if (cached.isEmpty) {
+      try {
+        final cached = await databaseService.getCachedAdditiveTypes();
+        if (cached.isEmpty) {
+          debugPrint(
+              '[ApiManager] No cached additive types found. Rethrowing API error.');
+          rethrow; // Rethrow API error if cache is also empty
+        } else {
+          debugPrint(
+              '[ApiManager] Returning ${cached.length} cached additive types from DB.');
+          return cached; // Return cached data
+        }
+      } catch (cacheError) {
         debugPrint(
-            '[ApiManager] No cached additive types found. Rethrowing error.');
-        rethrow; // Rethrow if cache is also empty
-      } else {
-        debugPrint(
-            '[ApiManager] Returning ${cached.length} cached additive types from DB.');
-        return cached; // Return cached data
+            '[ApiManager] Error reading from AdditiveType cache: $cacheError. Rethrowing original API error.');
+        rethrow; // Rethrow the original API error if cache read fails
       }
     }
   }
 
-  /// Fetch all WineBarrels from the server, caching them locally (ID and Name only).
-  /// On network error, fallback to the locally cached data (if any).
+  /// Fetch all WineTypes from the server, falling back to local cache on error.
+  /// The cache itself is updated periodically by SyncService.
+  Future<List<Map<String, dynamic>>> getAllWineTypesWithCaching(
+      String token) async {
+    debugPrint('[ApiManager] getAllWineTypesWithCaching() called.');
+    try {
+      // Always try to fetch fresh data first
+      final remoteList = await apiService.getAllWineTypes(token: token);
+      debugPrint(
+          '[ApiManager] Fetched remote wine types: ${remoteList.length} items.');
+      // Cache is updated by SyncService in the background.
+      return remoteList; // Return the fresh data from API
+    } catch (e) {
+      debugPrint(
+          '[ApiManager] Error fetching WineTypes from API: $e. Trying cache...');
+      // Fallback to local cache if API fails
+      try {
+        final cached =
+            await databaseService.getCachedWineTypes(); // Use the new DB method
+        if (cached.isEmpty) {
+          debugPrint(
+              '[ApiManager] No cached wine types found. Rethrowing API error.');
+          rethrow; // Rethrow API error if cache is also empty
+        } else {
+          debugPrint(
+              '[ApiManager] Returning ${cached.length} cached wine types from DB.');
+          return cached; // Return cached data
+        }
+      } catch (cacheError) {
+        debugPrint(
+            '[ApiManager] Error reading from WineType cache: $cacheError. Rethrowing original API error.');
+        rethrow; // Rethrow the original API error if cache read fails
+      }
+    }
+  }
+
+  /// Fetch all WineBarrels from the server, falling back to local cache on error.
+  /// The cache itself is updated periodically by SyncService.
   Future<List<Map<String, dynamic>>> getAllWineBarrelsWithCaching(
       String token) async {
     debugPrint('[ApiManager] getAllWineBarrelsWithCaching() called.');
     try {
+      // Always try to fetch fresh data first
       final remoteList = await apiService.getAllWineBarrels(token: token);
       debugPrint(
           '[ApiManager] Fetched remote wine barrels: ${remoteList.length} items.');
-
-      // If successful, clear and update the local DB cache (ID and Name).
-      await databaseService.clearCachedWineBarrels();
-      for (final item in remoteList) {
-        // Ensure item has 'id' before caching
-        if (item['id'] != null) {
-          // Only cache relevant fields (id, name) according to current DB schema
-          final Map<String, dynamic> cacheItem = {
-            'id': item['id'],
-            'name': item['name'] ??
-                'Unbenanntes Fass' // Provide default if name is null
-          };
-          await databaseService.insertOrUpdateWineBarrel(cacheItem);
-        } else {
-          debugPrint(
-              '[ApiManager] Warning: Skipping WineBarrel without ID: $item');
-        }
-      }
-      debugPrint('[ApiManager] Wine barrels cache updated.');
+      // Cache is updated by SyncService in the background.
       return remoteList; // Return the full data fetched from API
     } catch (e) {
-      debugPrint('[ApiManager] Error fetching WineBarrels from API: $e');
+      debugPrint(
+          '[ApiManager] Error fetching WineBarrels from API: $e. Trying cache...');
       // Fallback to local cache if API fails
-      debugPrint('[ApiManager] Attempting to return cached WineBarrels...');
-      final cached = await databaseService.getCachedWineBarrels();
-      if (cached.isEmpty) {
+      try {
+        final cached = await databaseService.getCachedWineBarrels();
+        if (cached.isEmpty) {
+          debugPrint(
+              '[ApiManager] No cached wine barrels found. Rethrowing API error.');
+          rethrow; // Rethrow API error if cache is also empty
+        } else {
+          debugPrint(
+              '[ApiManager] Returning ${cached.length} cached wine barrels from DB.');
+          // IMPORTANT: Returning cached data which currently only has id and name.
+          // UI needs to handle potentially incomplete data when offline.
+          return cached;
+        }
+      } catch (cacheError) {
         debugPrint(
-            '[ApiManager] No cached wine barrels found. Rethrowing error.');
-        rethrow; // Rethrow if cache is also empty
-      } else {
-        debugPrint(
-            '[ApiManager] Returning ${cached.length} cached wine barrels from DB.');
-        // IMPORTANT: Returning cached data which currently only has id and name.
-        // The UI needs to be aware it might receive less data when offline.
-        return cached;
+            '[ApiManager] Error reading from WineBarrel cache: $cacheError. Rethrowing original API error.');
+        rethrow; // Rethrow the original API error if cache read fails
       }
     }
   }
@@ -159,16 +180,11 @@ class ApiManager {
     debugPrint('[ApiManager] createAdditive() called with additive: $additive');
 
     // Prepare payload exactly as needed by ApiService.createAdditive
-    // Ensure required fields are present and have correct types (e.g., IDs as strings)
     final apiPayload = {
-      'date': additive['date'] ??
-          DateTime.now().toIso8601String(), // Default to now if not provided
-      'amountGrammsPerLitre': additive[
-          'amountGrammsPerLitre'], // Ensure this key exists and is double/float
-      'additiveTypeId': additive['additiveTypeId']
-          ?.toString(), // Ensure this key exists and is String (UUID)
-      'wineId': additive['wineId']
-          ?.toString(), // Ensure this key exists and is String (UUID)
+      'date': additive['date'] ?? DateTime.now().toIso8601String(),
+      'amountGrammsPerLitre': additive['amountGrammsPerLitre'],
+      'additiveTypeId': additive['additiveTypeId']?.toString(),
+      'wineId': additive['wineId']?.toString(),
     };
 
     // Validate payload before proceeding
@@ -185,53 +201,118 @@ class ApiManager {
         '[ApiManager] Prepared API payload for createAdditive: $apiPayload');
 
     try {
-      // Attempt to create via API
       final result = await apiService.createAdditive(apiPayload, token: token);
       debugPrint('[ApiManager] Additive created successfully via API: $result');
 
-      // Log to history on success
       final historyEntry = {
         'operationType': 'createAdditive',
-        'payload': apiPayload, // Log the payload sent to API
+        'payload': apiPayload,
         'timestamp': DateTime.now().toIso8601String(),
-        'status': 'Synced', // Indicate it was successful online
-        'result': result, // Optionally log the API response
+        'status': 'Synced',
+        'result': result,
       };
       await historyService.addHistoryEntry(historyEntry);
       debugPrint(
           '[ApiManager] History entry added for successful createAdditive.');
-      return result; // Return the result from the API
+      return result;
     } catch (e) {
       debugPrint('[ApiManager] Error in createAdditive API call: $e');
-      // Check if it's a network-related error (offline)
       if (e is NoResponseException ||
           e.toString().contains('SocketException')) {
         debugPrint(
             '[ApiManager] Network error detected. Saving createAdditive operation locally.');
-        // Save operation locally for later sync
         final operation = {
           'operationType': 'createAdditive',
-          'payload': jsonEncode(apiPayload), // Store the payload as JSON string
+          'payload': jsonEncode(apiPayload),
           'timestamp': DateTime.now().toIso8601String(),
         };
         try {
           await databaseService.insertPendingOperation(operation);
           debugPrint(
               '[ApiManager] createAdditive operation saved locally for later commit.');
-          // IMPORTANT: When offline, we cannot return the actual result from the server.
-          // Return a placeholder or handle this case in the UI.
-          // Here, we rethrow to indicate the online operation failed but was queued.
-          // Consider returning a specific status or object indicating offline queuing.
           throw OfflineOperationQueuedException(
               'Create Additive operation queued locally.');
         } catch (dbError) {
           debugPrint(
               '[ApiManager] CRITICAL: Failed to save pending operation locally: $dbError');
-          // Rethrow original API error if saving locally fails
           rethrow;
         }
       } else {
-        // For other API errors (e.g., 400 Bad Request, 500 Server Error), just rethrow.
+        debugPrint('[ApiManager] Non-network API error. Rethrowing.');
+        rethrow;
+      }
+    }
+  }
+
+  /// Updates an additive (if possible) and logs it to history.
+  /// If offline, the operation is saved to pending operations.
+  /// Expects `additive` map with keys matching the API schema.
+  Future<void> updateAdditive(
+      String id, Map<String, dynamic> additive, String token) async {
+    // Note: Changed id type to String.
+    debugPrint(
+        '[ApiManager] updateAdditive() called for id: $id with additive: $additive');
+
+    // Prepare payload (similar validation as createAdditive might be needed)
+    final apiPayload = {
+      // Include fields allowed for update by the API
+      'id': id, // Usually needed for PUT request body as well
+      'date': additive['date'],
+      'amountGrammsPerLitre': additive['amountGrammsPerLitre'],
+      'additiveTypeId': additive['additiveTypeId']?.toString(),
+      'wineId': additive['wineId']?.toString(),
+    };
+    // Remove null values if the API doesn't expect them for updates
+    apiPayload.removeWhere((key, value) => value == null);
+
+    debugPrint(
+        '[ApiManager] Prepared API payload for updateAdditive: $apiPayload');
+
+    try {
+      // Attempt API update
+      await apiService.updateAdditive(id, apiPayload, token: token);
+      debugPrint('[ApiManager] updateAdditive() succeeded via API for id: $id');
+
+      // Log to history
+      final historyEntry = {
+        'operationType': 'updateAdditive',
+        'payload': {
+          'id': id,
+          'updateData': apiPayload
+        }, // Log ID and the data sent
+        'timestamp': DateTime.now().toIso8601String(),
+        'status': 'Synced',
+      };
+      await historyService.addHistoryEntry(historyEntry);
+      debugPrint(
+          '[ApiManager] History entry added for successful updateAdditive.');
+    } catch (e) {
+      debugPrint('[ApiManager] Error in updateAdditive API call: $e');
+      // Check for network error
+      if (e is NoResponseException ||
+          e.toString().contains('SocketException')) {
+        debugPrint(
+            '[ApiManager] Network error detected. Saving updateAdditive operation locally.');
+        // Save operation locally
+        final operation = {
+          'operationType': 'updateAdditive',
+          // Store ID and payload needed for the update
+          'payload': jsonEncode({'id': id, 'additive': apiPayload}),
+          'timestamp': DateTime.now().toIso8601String(),
+        };
+        try {
+          await databaseService.insertPendingOperation(operation);
+          debugPrint(
+              '[ApiManager] updateAdditive operation saved locally for later commit.');
+          throw OfflineOperationQueuedException(
+              'Update Additive operation queued locally.');
+        } catch (dbError) {
+          debugPrint(
+              '[ApiManager] CRITICAL: Failed to save pending operation locally: $dbError');
+          rethrow;
+        }
+      } else {
+        // Rethrow other API errors
         debugPrint('[ApiManager] Non-network API error. Rethrowing.');
         rethrow;
       }

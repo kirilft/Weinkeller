@@ -7,9 +7,10 @@ import 'package:weinkeller/services/database_service.dart';
 import 'package:weinkeller/config/app_colors.dart';
 import 'package:weinkeller/components/pending_changes.dart';
 import 'package:weinkeller/services/auth_service.dart';
-// Import both ApiManager and ApiService as they are needed by the v3 _fetchWines/_showManualSelectDialog
+// Only ApiManager should be needed here now for fetching cached data
 import 'package:weinkeller/services/api_manager.dart';
-import 'package:weinkeller/services/api_service.dart';
+// ApiService import might not be needed directly anymore in this file
+// import 'package:weinkeller/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // Keep random greeting logic
   void _pickRandomGreeting() {
     final randomIndex = Random().nextInt(_greetings.length);
-    // Use setState only if needed, here it's just initialization
     _randomGreeting = _greetings[randomIndex];
   }
 
@@ -57,20 +57,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Shows the bottom sheet displaying pending changes (offline operations).
-  /// Use the style from the original design provided by user.
   void _showPendingChanges() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        // Style from original design
         return Container(
           constraints: const BoxConstraints(maxHeight: 414),
           decoration: const BoxDecoration(
-            color: Colors.white, // Original design used white
-            borderRadius: BorderRadius.vertical(
-                top: Radius.circular(54)), // Original radius
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(54)),
           ),
           child: const PendingChanges(),
         );
@@ -78,77 +75,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Fetches the list of wine barrels AND their current wine types using ApiManager/ApiService.
-  /// Returns a list of maps, where each map contains 'barrel' data and 'wineType' data.
-  /// Handles potential errors during fetching.
-  /// ** KEEPING THIS METHOD FROM v3 AS IT'S REQUIRED BY THE v3 DIALOG **
+  /// Fetches barrels and wine types using ApiManager (leveraging caching)
+  /// and combines them for the dialog.
+  /// Returns a list of maps: [{'barrel': barrelData, 'currentWineType': wineTypeData}].
   Future<List<Map<String, dynamic>>> _fetchWines() async {
-    // Access ApiManager, ApiService and AuthService using Provider
+    // Access ApiManager and AuthService using Provider
     final apiManager = Provider.of<ApiManager>(context, listen: false);
-    // We need ApiService directly to fetch the wine type for each barrel
-    final apiService = Provider.of<ApiService>(context, listen: false);
     final authService = Provider.of<AuthService>(context, listen: false);
-    final token = authService.authToken; // Get the current auth token
+    final token = authService.authToken;
 
-    if (token != null && token.isNotEmpty) {
-      List<Map<String, dynamic>> barrels = [];
-      try {
-        // 1. Get the list of barrels (potentially from cache)
-        debugPrint(
-            '[HomeScreen] Calling apiManager.getAllWineBarrelsWithCaching...');
-        barrels = await apiManager.getAllWineBarrelsWithCaching(token);
-        debugPrint('[HomeScreen] Fetched ${barrels.length} barrels.');
-
-        // 2. Pre-fetch the current wine type for each barrel
-        List<Map<String, dynamic>> combinedData = [];
-        for (final barrel in barrels) {
-          final barrelId = barrel['id']?.toString();
-          Map<String, dynamic>? wineType; // Initialize as null
-
-          if (barrelId != null) {
-            try {
-              // Fetch the wine type using ApiService directly
-              wineType =
-                  await apiService.getWineTypeForBarrel(barrelId, token: token);
-              debugPrint(
-                  '[HomeScreen] Fetched wine type for barrel $barrelId: ${wineType?['name']}');
-            } catch (e) {
-              // Log error fetching wine type for a specific barrel, but continue
-              debugPrint(
-                  '[HomeScreen] Error fetching wine type for barrel $barrelId: $e');
-              // wineType remains null, which is handled later
-            }
-          } else {
-            debugPrint(
-                '[HomeScreen] Warning: Barrel found without an ID in the list.');
-          }
-
-          // Add the barrel and its fetched wine type (or null) to the combined list
-          combinedData.add({
-            'barrel': barrel,
-            'wineType': wineType,
-          });
-        }
-        debugPrint(
-            '[HomeScreen] Finished pre-fetching wine types. Returning combined data.');
-        return combinedData; // Return the list containing both barrel and wine type info
-      } catch (e) {
-        // Log error if fetching the initial barrel list fails
-        debugPrint(
-            '[HomeScreen] Error fetching initial barrel list via ApiManager: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Fehler beim Laden der Fässer: ${e.toString().split(':').last}'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-        return []; // Return empty list on error
-      }
-    } else {
-      // Handle case where there's no authentication token
+    if (token == null || token.isEmpty) {
       debugPrint('[HomeScreen] No auth token found for fetching wines.');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -157,54 +93,107 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return []; // Return empty list if not authenticated
     }
+
+    try {
+      // 1. Fetch Barrels (tries API, falls back to cache)
+      debugPrint(
+          '[HomeScreen] Calling apiManager.getAllWineBarrelsWithCaching...');
+      final barrels = await apiManager.getAllWineBarrelsWithCaching(token);
+      debugPrint('[HomeScreen] Fetched ${barrels.length} barrels.');
+
+      // 2. Fetch All Wine Types (tries API, falls back to cache)
+      debugPrint(
+          '[HomeScreen] Calling apiManager.getAllWineTypesWithCaching...');
+      final allWineTypes = await apiManager.getAllWineTypesWithCaching(token);
+      debugPrint('[HomeScreen] Fetched ${allWineTypes.length} wine types.');
+
+      // 3. Create a lookup map for Wine Types by ID
+      final wineTypeMap = <String, Map<String, dynamic>>{
+        for (var wt in allWineTypes)
+          if (wt['id'] != null) wt['id'].toString(): wt,
+      };
+      debugPrint('[HomeScreen] Created WineType lookup map.');
+
+      // 4. Combine Barrel data with its corresponding Wine Type data
+      List<Map<String, dynamic>> combinedData = [];
+      for (final barrel in barrels) {
+        final currentWineTypeId = barrel['currentWineTypeId']?.toString();
+        Map<String, dynamic>? currentWineType; // Initialize as null
+
+        if (currentWineTypeId != null) {
+          // Look up the wine type in the map
+          currentWineType = wineTypeMap[currentWineTypeId];
+          if (currentWineType == null) {
+            debugPrint(
+                '[HomeScreen] Warning: WineType with ID $currentWineTypeId not found in fetched/cached types for barrel ${barrel['id']}.');
+          }
+        } else {
+          // Barrel might be empty or data missing
+          // debugPrint('[HomeScreen] Barrel ${barrel['id']} has no currentWineTypeId.');
+        }
+
+        combinedData.add({
+          'barrel': barrel, // The full barrel data
+          'currentWineType':
+              currentWineType, // The corresponding wine type data (or null)
+        });
+      }
+
+      debugPrint('[HomeScreen] Finished combining barrel and wine type data.');
+      return combinedData;
+    } catch (e) {
+      // Log error if fetching barrels or wine types fails significantly
+      debugPrint('[HomeScreen] Error during _fetchWines data retrieval: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Fehler beim Laden der Daten: ${e.toString().split(':').last}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return []; // Return empty list on error
+    }
   }
 
   /// Opens a bottom sheet displaying a list of wine barrels for manual selection.
-  /// Displays the wine type of the barrel below the current one.
-  /// ** KEEPING THIS METHOD FROM v3 AS REQUESTED **
+  /// Displays the wine type of the barrel below the current one, using pre-fetched data.
   void _showManualSelectDialog() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Allows sheet to take variable height
-      backgroundColor: Colors.transparent, // Sheet background is transparent
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        // Use FutureBuilder to handle the asynchronous fetching of combined barrel/wine data
+        // Use FutureBuilder to handle the asynchronous fetching of combined data
         return FutureBuilder<List<Map<String, dynamic>>>(
-          future:
-              _fetchWines(), // Call the method to fetch combined data (uses caching for barrels)
+          future: _fetchWines(), // Calls the updated method
           builder: (context, snapshot) {
-            // Show loading indicator while waiting for data
+            // Loading indicator
             if (snapshot.connectionState == ConnectionState.waiting) {
-              // Consistent styling for loader background
               return Container(
-                height: 200, // Give it some height
+                height: 200,
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surface, // Use theme surface color
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(54)), // Match original radius
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(54)),
                 ),
                 child: const Center(child: CircularProgressIndicator()),
               );
             }
-            // Show error message if fetching failed
+            // Error display
             if (snapshot.hasError) {
-              // Consistent styling for error background
               return Container(
                 height: 200,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surface, // Use theme surface color
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(54)), // Match original radius
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(54)),
                 ),
                 child: Center(
                   child: Text(
-                    // Use original error text style
-                    'Fehler beim Laden der Weine', // Simpler error message like original
+                    'Fehler beim Laden der Weine',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
@@ -215,79 +204,75 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             }
-            // If data is available, display the list
-            final combinedWinesData = snapshot.data ?? [];
 
-            // Build the container for the list
+            // Data available: snapshot.data is List<{'barrel': {...}, 'currentWineType': {...}}>]
+            final combinedData = snapshot.data ?? [];
+
+            // Build the dialog content
             return Container(
-              constraints: const BoxConstraints(
-                  maxHeight: 414), // Max height from original
-              padding: const EdgeInsets.only(
-                  top: 16), // Padding at the top from original
+              constraints: const BoxConstraints(maxHeight: 414),
+              padding: const EdgeInsets.only(top: 16),
               decoration: BoxDecoration(
-                color:
-                    Theme.of(context).colorScheme.surface, // Background color
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(54)), // Rounded corners from original
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(54)),
               ),
-              // Use ListView.separated for list items with dividers
-              child: combinedWinesData.isEmpty
+              child: combinedData.isEmpty
                   ? Center(
                       child: Text("Keine Fässer gefunden.",
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface)))
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16), // Padding for the list from original
-                      itemCount: combinedWinesData
-                          .length, // Number of items in the list
-                      separatorBuilder: (_, __) => const SizedBox(
-                          height: 8), // Space between items from original
+                          horizontal: 16, vertical: 16),
+                      itemCount: combinedData.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
-                        // --- Data Extraction (from v3 logic) ---
-                        final currentItem = combinedWinesData[index];
+                        // --- Data Extraction ---
+                        final currentItem = combinedData[index];
                         final currentBarrel =
                             currentItem['barrel'] as Map<String, dynamic>? ??
                                 {};
-                        final currentBarrelName = currentBarrel['name'] ??
-                            'Unbekannter Wein'; // Use original default text
+                        // final currentWineType = currentItem['currentWineType'] as Map<String, dynamic>?; // Wine type of *this* barrel
+
+                        final currentBarrelName =
+                            currentBarrel['name'] ?? 'Unbekannter Wein';
                         final currentBarrelId = currentBarrel['id']?.toString();
 
-                        // --- Determine Subtitle (Wine in Barrel Below - from v3 logic) ---
-                        String subtitleText = ''; // Default empty subtitle
-                        if (index + 1 < combinedWinesData.length) {
-                          final nextItem = combinedWinesData[index + 1];
-                          final nextWineType =
-                              nextItem['wineType'] as Map<String, dynamic>?;
+                        // --- Determine Subtitle (Wine in Barrel Below) ---
+                        String subtitleText = '';
+                        if (index + 1 < combinedData.length) {
+                          final nextItem = combinedData[index + 1];
+                          // Get the pre-fetched wine type data for the *next* barrel
+                          final nextWineTypeData = nextItem['currentWineType']
+                              as Map<String, dynamic>?;
                           final nextWineTypeName =
-                              nextWineType?['name'] as String?;
+                              nextWineTypeData?['name'] as String?;
 
                           if (nextWineTypeName != null &&
                               nextWineTypeName.isNotEmpty) {
-                            subtitleText = 'Darunter: $nextWineTypeName';
-                          } else if (nextWineType != null) {
-                            subtitleText = 'Darunter: (Unbekannter Weintyp)';
+                            subtitleText = nextWineTypeName;
+                          } else if (nextWineTypeData != null) {
+                            // If next barrel has a wine type ID but we couldn't find the name in cache
+                            subtitleText = '(Unbekannter Weintyp)';
                           } else {
-                            subtitleText = 'Darunter: (Kein Wein / Fehler)';
+                            // If next barrel has no currentWineTypeId or fetch failed earlier
+                            subtitleText = '(Fass leer / Kein Weintyp)';
                           }
                         } else {
                           subtitleText = 'Letztes Fass in der Liste';
                         }
 
-                        // --- Build ListTile (Combine original style with v3 subtitle) ---
+                        // --- Build ListTile ---
                         return ListTile(
                           title: Text(currentBarrelName,
-                              // Style from original design
                               style: TextStyle(
                                   fontFamily: 'SF Pro',
                                   color:
                                       Theme.of(context).colorScheme.onSurface)),
-                          // Display the determined subtitle (from v3 logic)
                           subtitle: Text(
                             subtitleText,
                             style: TextStyle(
-                              // Style subtitle similarly to v3
                               fontFamily: 'SF Pro',
                               fontSize: 12,
                               color: Theme.of(context)
@@ -297,7 +282,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           onTap: () {
-                            // Original onTap logic
                             Navigator.pop(context);
                             if (currentBarrelId != null) {
                               Navigator.pushNamed(context, '/entryDetails',
@@ -328,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDarkMode = theme.brightness == Brightness.dark;
     final dbService = Provider.of<DatabaseService>(context, listen: false);
 
-    // ** USING THE UI STRUCTURE FROM THE USER'S PROVIDED ORIGINAL DESIGN **
+    // ** Using the UI structure from the user's provided original design **
     return Scaffold(
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
@@ -411,8 +395,6 @@ class _HomeScreenState extends State<HomeScreen> {
       // Drawer from original design
       drawer: Drawer(
         child: ListView(
-          // Remove padding: zero from original design might cause issues, let's keep default
-          // padding: EdgeInsets.zero,
           children: [
             SizedBox(
               // Original drawer header size
@@ -466,7 +448,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/history');
                 }),
-            // No divider or logout in original design
           ],
         ),
       ),

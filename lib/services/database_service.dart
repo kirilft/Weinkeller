@@ -24,9 +24,14 @@ class DatabaseService {
 
   Future<Database> _initDatabase() async {
     final path = await getDatabasesPath();
+    final databasePath = join(path, 'weinkeller.db');
+    debugPrint('[DatabaseService] Database path: $databasePath');
+
     return openDatabase(
-      join(path, 'weinkeller.db'),
+      databasePath,
       onCreate: (db, version) async {
+        debugPrint(
+            '[DatabaseService] Creating database tables version $version...');
         // Table for operations that need to be synced later.
         await db.execute('''
           CREATE TABLE pending_operations (
@@ -51,9 +56,32 @@ class DatabaseService {
             -- Add other fields here if needed for offline display, e.g., volumeInLitre REAL
           )
         ''');
+        // ** NEW: Table for caching wine types (fetched from API). **
+        await db.execute('''
+          CREATE TABLE cached_wine_types (
+            id TEXT PRIMARY KEY, -- Assuming WineType ID is TEXT (UUID)
+            name TEXT
+          )
+        ''');
+        debugPrint('[DatabaseService] Tables created.');
       },
-      // IMPORTANT: Increment version if schema changes. Add migration logic in onUpgrade if needed.
+      // IMPORTANT: If you modify the schema AFTER the first run, you MUST increment the version
+      // and implement the necessary changes in the `onUpgrade` callback.
       version: 1,
+      // Example onUpgrade (add this if you modify schema later):
+      // onUpgrade: (db, oldVersion, newVersion) async {
+      //   debugPrint('[DatabaseService] Upgrading database from $oldVersion to $newVersion...');
+      //   if (oldVersion < 2) {
+      //     // Example: Add WineType table if upgrading from version 1
+      //     await db.execute('''
+      //       CREATE TABLE cached_wine_types (
+      //         id TEXT PRIMARY KEY,
+      //         name TEXT
+      //       )
+      //     ''');
+      //   }
+      //   // Add more migration steps for future versions here
+      // },
     );
   }
 
@@ -95,7 +123,7 @@ class DatabaseService {
     // Use count aggregation for efficiency
     final result = await db.rawQuery('SELECT COUNT(*) FROM pending_operations');
     final count = Sqflite.firstIntValue(result) ?? 0;
-    debugPrint('[DatabaseService] Pending operations count: $count');
+    // debugPrint('[DatabaseService] Pending operations count: $count'); // Less verbose logging
     return count;
   }
 
@@ -126,9 +154,22 @@ class DatabaseService {
     final allOperations = await getPendingOperations();
     int successfullyProcessed = 0;
 
+    if (allOperations.isEmpty) {
+      debugPrint('[DatabaseService] No pending operations to re-upload.');
+      return;
+    }
+
+    debugPrint(
+        '[DatabaseService] Starting re-upload attempt for ${allOperations.length} operations...');
     for (final operation in allOperations) {
       try {
         // TODO: Implement actual API call based on operation['operationType'] and operation['payload']
+        // Example:
+        // final type = operation['operationType'];
+        // final payload = jsonDecode(operation['payload']);
+        // if (type == 'createAdditive') { await apiService.createAdditive(payload, token); }
+        // else if (...) { ... }
+
         debugPrint(
             '[DatabaseService] Simulating re-upload for operation: ${operation['id']} - ${operation['operationType']}');
         // Simulate success by deleting the local entry
@@ -139,6 +180,7 @@ class DatabaseService {
         // Log error but continue with other operations
         debugPrint(
             '[DatabaseService] Reupload failed for operation ${operation['id']}: $e');
+        // Consider adding more robust error handling or retry logic here
       }
     }
 
@@ -153,7 +195,6 @@ class DatabaseService {
   Future<void> insertOrUpdateAdditiveType(
       Map<String, dynamic> additiveType) async {
     final db = await database;
-    // Ensure required fields are present
     if (additiveType['id'] == null) {
       debugPrint(
           '[DatabaseService] Error: Cannot cache AdditiveType without an ID.');
@@ -161,31 +202,21 @@ class DatabaseService {
     }
     await db.insert(
       'cached_additive_types',
-      {
-        // Explicitly map to ensure correct columns
-        'id': additiveType['id'],
-        'type': additiveType['type']
-      },
+      {'id': additiveType['id'], 'type': additiveType['type']},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    // debugPrint('[DatabaseService] Cached/Updated AdditiveType ID: ${additiveType['id']}');
   }
 
   /// Retrieves all cached additive types.
   Future<List<Map<String, dynamic>>> getCachedAdditiveTypes() async {
     final db = await database;
-    final List<Map<String, dynamic>> types =
-        await db.query('cached_additive_types');
-    debugPrint(
-        '[DatabaseService] Retrieved ${types.length} cached additive types.');
-    return types;
+    return await db.query('cached_additive_types');
   }
 
   /// Clears all cached additive types.
   Future<void> clearCachedAdditiveTypes() async {
     final db = await database;
-    final deletedRows = await db.delete('cached_additive_types');
-    debugPrint('[DatabaseService] Cleared $deletedRows cached additive types.');
+    await db.delete('cached_additive_types');
   }
 
   // --- Wine Barrels Cache ---
@@ -193,7 +224,6 @@ class DatabaseService {
   /// Inserts or updates a cached wine barrel (currently only ID and name).
   Future<void> insertOrUpdateWineBarrel(Map<String, dynamic> wineBarrel) async {
     final db = await database;
-    // Ensure required fields are present
     if (wineBarrel['id'] == null) {
       debugPrint(
           '[DatabaseService] Error: Cannot cache WineBarrel without an ID.');
@@ -201,35 +231,58 @@ class DatabaseService {
     }
     await db.insert(
       'cached_wine_barrels',
-      {
-        // Explicitly map to ensure correct columns
-        'id': wineBarrel['id'],
-        'name': wineBarrel['name'] // Assuming 'name' exists in the map
-      },
+      {'id': wineBarrel['id'], 'name': wineBarrel['name']},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    // debugPrint('[DatabaseService] Cached/Updated WineBarrel ID: ${wineBarrel['id']}');
   }
 
   /// Retrieves all cached wine barrels (currently only ID and name).
   Future<List<Map<String, dynamic>>> getCachedWineBarrels() async {
     final db = await database;
-    final List<Map<String, dynamic>> barrels =
-        await db.query('cached_wine_barrels');
-    debugPrint(
-        '[DatabaseService] Retrieved ${barrels.length} cached wine barrels.');
-    return barrels;
+    return await db.query('cached_wine_barrels');
   }
 
   /// Clears all cached wine barrels.
   Future<void> clearCachedWineBarrels() async {
     final db = await database;
-    final deletedRows = await db.delete('cached_wine_barrels');
-    debugPrint('[DatabaseService] Cleared $deletedRows cached wine barrels.');
+    await db.delete('cached_wine_barrels');
+  }
+
+  // --- Wine Types Cache (NEW) ---
+
+  /// Inserts or updates a cached wine type.
+  Future<void> insertOrUpdateWineType(Map<String, dynamic> wineType) async {
+    final db = await database;
+    // Ensure required fields are present (id, name for WineType)
+    if (wineType['id'] == null) {
+      debugPrint(
+          '[DatabaseService] Error: Cannot cache WineType without an ID.');
+      return;
+    }
+    await db.insert(
+      'cached_wine_types',
+      {'id': wineType['id'], 'name': wineType['name']}, // Cache ID and Name
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Retrieves all cached wine types.
+  Future<List<Map<String, dynamic>>> getCachedWineTypes() async {
+    final db = await database;
+    final List<Map<String, dynamic>> types =
+        await db.query('cached_wine_types');
+    // debugPrint('[DatabaseService] Retrieved ${types.length} cached wine types.'); // Less verbose
+    return types;
+  }
+
+  /// Clears all cached wine types.
+  Future<void> clearCachedWineTypes() async {
+    final db = await database;
+    final deletedRows = await db.delete('cached_wine_types');
+    debugPrint('[DatabaseService] Cleared $deletedRows cached wine types.');
   }
 
   /// Dispose the stream controller when the service is no longer needed.
-  /// Typically called when the app is closing or the provider is disposed.
   void dispose() {
     _pendingOperationsController.close();
     debugPrint('[DatabaseService] Disposed.');
