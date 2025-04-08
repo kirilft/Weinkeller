@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:weinkeller/services/auth_service.dart';
-import 'package:weinkeller/services/api_service.dart';
+import 'package:weinkeller/services/api_service.dart'; // Still needed for exceptions
+// Import SyncService to trigger the update
+import 'package:weinkeller/services/sync_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart'; // For HapticFeedback
+
+// --- Constants and ShadowedButton remain the same ---
 
 const List<Shadow> kTextShadow = [
   Shadow(
@@ -71,6 +75,7 @@ class ShadowedButton extends StatelessWidget {
   }
 }
 
+// --- Exceptions remain the same ---
 class NoResponseException implements Exception {
   final String message;
   NoResponseException(this.message);
@@ -84,6 +89,8 @@ class WrongPasswordException implements Exception {
   WrongPasswordException(this.message);
 }
 
+// --- LoginPage Widget ---
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -94,14 +101,24 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false; // State to handle loading indicator
 
   /// Checks if the `baseUrl` is empty and navigates to the settings page.
   Future<void> _checkBaseUrl() async {
+    // Use mounted check for safety in async gaps
+    if (!mounted) return;
     final apiService = Provider.of<ApiService>(context, listen: false);
     if (apiService.baseUrl.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/settings');
-      });
+      // Ensure context is still valid before navigating
+      if (mounted) {
+        // Use addPostFrameCallback to avoid building during build phase
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            // Double check mounted after callback
+            Navigator.pushReplacementNamed(context, '/settings');
+          }
+        });
+      }
     }
   }
 
@@ -111,20 +128,22 @@ class _LoginPageState extends State<LoginPage> {
     _checkBaseUrl();
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   void _showErrorDialog(String title, String message) {
+    if (!mounted) return; // Check if widget is still active
     showDialog<void>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // User must tap button!
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(
-            title,
-          ),
-          content: SingleChildScrollView(
-            child: Text(
-              message,
-            ),
-          ),
+          title: Text(title),
+          content: SingleChildScrollView(child: Text(message)),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -136,26 +155,80 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  /// Handles the login process, including triggering an initial sync on success.
   Future<void> _handleLogin() async {
+    if (_isLoading) return; // Prevent multiple login attempts
+
+    setState(() {
+      _isLoading = true;
+    }); // Show loading indicator
+
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+
+    // Use mounted check before accessing context after async gap
+    if (!mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
     final authService = Provider.of<AuthService>(context, listen: false);
+    // Get SyncService instance
+    final syncService = Provider.of<SyncService>(context, listen: false);
 
     try {
       final success = await authService.login(email, password);
-      if (success && authService.isLoggedIn) {
-        HapticFeedback.lightImpact();
-        Navigator.pushReplacementNamed(context, '/');
-      } else {
-        _showErrorDialog('Login Error', 'Das eingegebene Passwort ist falsch.');
+
+      if (success && authService.isLoggedIn && mounted) {
+        HapticFeedback.lightImpact(); // Provide feedback
+
+        // ** Trigger immediate sync after successful login **
+        final token = authService.authToken;
+        if (token != null && token.isNotEmpty) {
+          debugPrint(
+              "[LoginPage] Login successful. Triggering immediate sync...");
+          try {
+            // Perform the sync but don't block navigation if it fails
+            await syncService.updatePendingOperationsAndFetch(token);
+            debugPrint("[LoginPage] Immediate sync after login completed.");
+          } catch (syncError) {
+            // Log sync error but proceed with navigation
+            debugPrint(
+                "[LoginPage] Error during immediate sync after login: $syncError");
+            // Optionally show a non-blocking notification about sync failure
+            // ScaffoldMessenger.of(context).showSnackBar(
+            //   SnackBar(content: Text('Hintergrund-Sync fehlgeschlagen: $syncError')),
+            // );
+          }
+        }
+
+        // Navigate to home screen after login and sync attempt
+        if (mounted) {
+          // Check mounted again before navigating
+          Navigator.pushReplacementNamed(context, '/');
+        }
+      } else if (mounted) {
+        // Handle login failure (e.g., wrong password returned false)
+        _showErrorDialog(
+            'Login fehlgeschlagen', 'E-Mail oder Passwort ist falsch.');
       }
+    } on WrongPasswordException catch (e) {
+      if (mounted) _showErrorDialog('Login fehlgeschlagen', e.message);
+    } on NoResponseException catch (e) {
+      if (mounted) _showErrorDialog('Server Fehler', e.message);
     } catch (e) {
-      if (e is WrongPasswordException) {
-        _showErrorDialog('Login Error', e.message);
-      } else if (e is NoResponseException) {
-        _showErrorDialog('Server Error', e.message);
-      } else {
-        _showErrorDialog('Error', e.toString());
+      // Catch any other unexpected errors during login
+      if (mounted) {
+        _showErrorDialog('Fehler',
+            'Ein unerwarteter Fehler ist aufgetreten: ${e.toString()}');
+      }
+    } finally {
+      // Ensure loading indicator is hidden regardless of outcome
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -184,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
             color: theme.colorScheme.onSurface,
             shadows: kTextShadow,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.maybePop(context), // Use maybePop
         ),
       ),
       actions: [
@@ -218,7 +291,7 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: screenHeight * 0.2),
+            SizedBox(height: screenHeight * 0.15), // Adjusted spacing
             AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +299,10 @@ class _LoginPageState extends State<LoginPage> {
                   TextField(
                     controller: _emailController,
                     autofillHints: const [AutofillHints.email],
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(labelText: 'Email'),
+                    enabled: !_isLoading, // Disable when loading
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -234,19 +310,25 @@ class _LoginPageState extends State<LoginPage> {
                     autofillHints: const [AutofillHints.password],
                     decoration: const InputDecoration(labelText: 'Passwort'),
                     obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) =>
+                        _handleLogin(), // Allow login via keyboard action
+                    enabled: !_isLoading, // Disable when loading
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 30), // Increased spacing
             Align(
               alignment: Alignment.centerRight,
-              child: ShadowedButton(
-                label: 'Anmelden',
-                backgroundColor: theme.colorScheme.primary,
-                textColor: theme.colorScheme.onPrimary,
-                onPressed: _handleLogin,
-              ),
+              child: _isLoading
+                  ? const CircularProgressIndicator() // Show loader when loading
+                  : ShadowedButton(
+                      label: 'Anmelden',
+                      backgroundColor: theme.colorScheme.primary,
+                      textColor: theme.colorScheme.onPrimary,
+                      onPressed: _handleLogin,
+                    ),
             ),
           ],
         ),
